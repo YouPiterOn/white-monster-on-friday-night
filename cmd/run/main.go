@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"os"
 
@@ -26,19 +24,30 @@ func main() {
 	}
 
 	fmt.Printf("read %d bytes from %s\n", len(buffer), path)
+	fmt.Printf("buffer: %s\n", string(buffer))
 
-	scanner := bufio.NewScanner(bytes.NewReader(buffer))
 	lexer := lexer.NewLexer()
 
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		result := lexer.Lex(line)
-		parser := ast.NewParser(result.Tokens)
-		statement := parser.ParseStatement()
-
-		debugVisitor := debug.DebugVisitor{}
-
-		statement.Visit(&debugVisitor)
+	lexerResult := lexer.Lex(string(buffer))
+	if len(lexerResult.Errors) > 0 {
+		fmt.Printf("failed to lex file %s: %v\n", path, lexerResult.Errors)
+		os.Exit(1)
 	}
+
+	for _, token := range lexerResult.Tokens {
+		fmt.Printf("token: %s\n", token.String())
+	}
+
+	parser := ast.NewParser(lexerResult.Tokens)
+	program := parser.ParseProgram()
+	if len(parser.Errors) > 0 {
+		fmt.Printf("failed to parse tokens from file %s\n", path)
+		for _, error := range parser.Errors {
+			fmt.Printf("  %s at %v\n", error.Message, error.Pos)
+		}
+		os.Exit(1)
+	}
+
+	debugVisitor := debug.DebugVisitor{}
+	program.Visit(&debugVisitor)
 }

@@ -7,6 +7,17 @@ type Statement interface {
 	statementNode()
 }
 
+type Block struct {
+	Statements []Statement
+	PosAt      *lexer.SourcePos
+}
+
+func (b *Block) Pos() *lexer.SourcePos { return b.PosAt }
+func (b *Block) statementNode()        {}
+func (b *Block) Visit(v Visitor[any]) any {
+	return v.VisitBlock(b)
+}
+
 type Assignment struct {
 	Specifier  lexer.KeywordSubkind
 	Identifier *Identifier

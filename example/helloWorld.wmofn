@@ -1,1 +1,7 @@
-const a = 5
+const a = 60;
+
+function add(a, b) {
+  return a + b;
+}
+
+return add(a, 9);

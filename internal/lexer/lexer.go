@@ -52,8 +52,34 @@ func (l *Lexer) Lex(input string) LexResult {
 
 		case StateInitial:
 			// whitespace
-			if ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' {
+			if isWs(ch) {
 				l.next()
+				continue
+			}
+
+			// punctuator ';'
+			if ch == ';' {
+				pos := l.posSpan(1)
+				l.next()
+				tokens = append(tokens, Token{
+					Lexeme:  ";",
+					Kind:    Punctuator,
+					Subkind: StatementEnd,
+					Pos:     &pos,
+				})
+				continue
+			}
+
+			// punctuator ','
+			if ch == ',' {
+				pos := l.posSpan(1)
+				l.next()
+				tokens = append(tokens, Token{
+					Lexeme:  ",",
+					Kind:    Punctuator,
+					Subkind: Comma,
+					Pos:     &pos,
+				})
 				continue
 			}
 
@@ -65,6 +91,58 @@ func (l *Lexer) Lex(input string) LexResult {
 					Lexeme:  "=",
 					Kind:    Punctuator,
 					Subkind: Assign,
+					Pos:     &pos,
+				})
+				continue
+			}
+
+			// punctuator '{'
+			if ch == '{' {
+				pos := l.posSpan(1)
+				l.next()
+				tokens = append(tokens, Token{
+					Lexeme:  "{",
+					Kind:    Punctuator,
+					Subkind: BlockStart,
+					Pos:     &pos,
+				})
+				continue
+			}
+
+			// punctuator '}'
+			if ch == '}' {
+				pos := l.posSpan(1)
+				l.next()
+				tokens = append(tokens, Token{
+					Lexeme:  "}",
+					Kind:    Punctuator,
+					Subkind: BlockEnd,
+					Pos:     &pos,
+				})
+				continue
+			}
+
+			// punctuator '('
+			if ch == '(' {
+				pos := l.posSpan(1)
+				l.next()
+				tokens = append(tokens, Token{
+					Lexeme:  "(",
+					Kind:    Punctuator,
+					Subkind: ParenOpen,
+					Pos:     &pos,
+				})
+				continue
+			}
+
+			// punctuator ')'
+			if ch == ')' {
+				pos := l.posSpan(1)
+				l.next()
+				tokens = append(tokens, Token{
+					Lexeme:  ")",
+					Kind:    Punctuator,
+					Subkind: ParenClose,
 					Pos:     &pos,
 				})
 				continue
@@ -199,6 +277,14 @@ func (l *Lexer) flushIdentifier() (*Token, *LexError) {
 			Pos:     &pos,
 		}, nil
 	}
+	if lex == "function" {
+		return &Token{
+			Lexeme:  lex,
+			Kind:    Keyword,
+			Subkind: KeywordFunction,
+			Pos:     &pos,
+		}, nil
+	}
 
 	// identifier
 	return &Token{
@@ -226,6 +312,10 @@ func (l *Lexer) flushNumber() (*Token, *LexError) {
 }
 
 // ---------- Helpers ----------
+
+func isWs(ch byte) bool {
+	return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n'
+}
 
 func isDigit(ch byte) bool {
 	return ch >= '0' && ch <= '9'
