@@ -94,6 +94,7 @@ const (
 	Plus OperatorSubkind = iota
 	Minus
 	Star
+	Slash
 )
 
 func (k OperatorSubkind) String() string {
@@ -101,6 +102,7 @@ func (k OperatorSubkind) String() string {
 		"+",
 		"-",
 		"*",
+		"/",
 	}[k]
 }
 
