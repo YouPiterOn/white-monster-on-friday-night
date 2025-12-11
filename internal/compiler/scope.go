@@ -30,7 +30,7 @@ func NewScope(isFunctionScope bool) *Scope {
 func (s *Scope) NewChildScope(isFunctionScope bool) *Scope {
 	currentVarSlot := 0
 	currentUpvarSlot := 0
-	if isFunctionScope {
+	if !isFunctionScope {
 		currentVarSlot = s.currentVarSlot
 		currentUpvarSlot = s.currentUpvarSlot
 	}
