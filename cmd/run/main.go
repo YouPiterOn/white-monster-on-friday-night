@@ -7,6 +7,7 @@ import (
 	"youpiteron.dev/white-monster-on-friday-night/internal/ast"
 	"youpiteron.dev/white-monster-on-friday-night/internal/compiler"
 	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
+	"youpiteron.dev/white-monster-on-friday-night/internal/vm"
 )
 
 func main() {
@@ -58,6 +59,10 @@ func main() {
 		os.Exit(1)
 	}
 	for _, functionProto := range instructionsVisitor.FunctionProtos() {
-		fmt.Printf("function proto: %s\n", functionProto.String())
+		fmt.Printf("%s\n", functionProto.String())
 	}
+
+	vm := vm.NewVM(instructionsVisitor.FunctionProtos())
+	retval := vm.Run()
+	fmt.Printf("retval: %d\n", retval.Int)
 }

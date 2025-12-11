@@ -2,10 +2,14 @@ var a = 20;
 
 a = 60;
 
-const b = 123;
-
-function add(a, b) {
-  return a + b;
+{
+  const b = 123;
 }
 
-return add(a, 9);
+const b = 321;
+
+function addToA(other) {
+  return a + other;
+}
+
+return addToA(9);

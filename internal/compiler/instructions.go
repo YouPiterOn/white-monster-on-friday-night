@@ -110,6 +110,13 @@ func Div(regResult int, regLeft int, regRight int) Instruction {
 	}
 }
 
+func Closure(resultReg int, functionSlot int) Instruction {
+	return Instruction{
+		OpCode: CLOSURE,
+		Args:   []int{resultReg, functionSlot},
+	}
+}
+
 func Return(reg int) Instruction {
 	return Instruction{
 		OpCode: RETURN,

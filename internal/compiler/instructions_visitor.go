@@ -15,6 +15,7 @@ type SyntaxError struct {
 type InstructionsVisitor struct {
 	scope            *Scope
 	errors           []SyntaxError
+	warnings         []SyntaxError
 	reg              int
 	functionBuilders []FunctionBuilder
 	functionProtos   []FunctionProto
@@ -23,13 +24,17 @@ type InstructionsVisitor struct {
 // ---------- Constructor ----------
 
 func NewInstructionsVisitor() *InstructionsVisitor {
-	return &InstructionsVisitor{scope: nil, errors: []SyntaxError{}, reg: 0, functionBuilders: []FunctionBuilder{}, functionProtos: []FunctionProto{}}
+	return &InstructionsVisitor{scope: nil, errors: []SyntaxError{}, warnings: []SyntaxError{}, reg: 0, functionBuilders: []FunctionBuilder{}, functionProtos: []FunctionProto{}}
 }
 
 // ---------- Helpers ----------
 
 func (v *InstructionsVisitor) addError(message string, pos *lexer.SourcePos) {
 	v.errors = append(v.errors, SyntaxError{Message: message, Pos: pos})
+}
+
+func (v *InstructionsVisitor) addWarning(message string, pos *lexer.SourcePos) {
+	v.warnings = append(v.warnings, SyntaxError{Message: message, Pos: pos})
 }
 
 func (v *InstructionsVisitor) nextReg() int {
@@ -55,19 +60,51 @@ func (v *InstructionsVisitor) addFunctionBuilder(functionBuilder FunctionBuilder
 	v.functionBuilders = append(v.functionBuilders, functionBuilder)
 }
 
-func (v *InstructionsVisitor) buildFunctionProto() {
+func (v *InstructionsVisitor) buildFunctionProto(scope *Scope) int {
 	if len(v.functionBuilders) == 0 {
 		panic("COMPILER ERROR: no function builder found")
 	}
 	functionBuilder := v.functionBuilders[len(v.functionBuilders)-1]
-	v.functionProtos = append(v.functionProtos, functionBuilder.Build())
+	v.functionProtos = append(v.functionProtos, functionBuilder.Build(scope))
 	v.functionBuilders = v.functionBuilders[:len(v.functionBuilders)-1]
+	return len(v.functionProtos) - 1
+}
+
+func (v *InstructionsVisitor) enterFunctionScope(name string, numParams int) {
+	if v.scope == nil {
+		v.scope = NewScope(true)
+	} else {
+		v.scope = v.scope.NewChildScope(true)
+	}
+	v.addFunctionBuilder(*NewFunctionBuilder(name, numParams))
+}
+
+func (v *InstructionsVisitor) exitFunctionScope() int {
+	functionSlot := v.buildFunctionProto(v.scope)
+	v.scope = v.scope.parent
+	return functionSlot
+}
+
+func (v *InstructionsVisitor) enterBlockScope() {
+	if v.scope == nil {
+		v.scope = NewScope(false)
+	} else {
+		v.scope = v.scope.NewChildScope(false)
+	}
+}
+
+func (v *InstructionsVisitor) exitBlockScope() {
+	v.scope = v.scope.parent
 }
 
 // ---------- Getters ----------
 
 func (v *InstructionsVisitor) Errors() []SyntaxError {
 	return v.errors
+}
+
+func (v *InstructionsVisitor) Warnings() []SyntaxError {
+	return v.warnings
 }
 
 func (v *InstructionsVisitor) FunctionProtos() []FunctionProto {
@@ -77,14 +114,12 @@ func (v *InstructionsVisitor) FunctionProtos() []FunctionProto {
 // ---------- Visitor Implementations ----------
 
 func (v *InstructionsVisitor) VisitProgram(n *ast.Program) any {
-	v.scope = NewScope(true)
-	functionBuilder := NewFunctionBuilder("main")
-	v.addFunctionBuilder(*functionBuilder)
+	v.enterFunctionScope("main", 0)
 	for _, statement := range n.Statements {
 		statement.Visit(v)
 		v.resetReg()
 	}
-	v.buildFunctionProto()
+	v.exitFunctionScope()
 	return nil
 }
 
@@ -119,13 +154,13 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 	}
 	if localVar != nil {
 		if !localVar.mutable {
-			v.addError(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
+			v.addWarning(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
 		v.addInstruction(StoreVar(valueRxInt, localVar.slot))
 	} else if upvar != nil {
 		if !upvar.mutable {
-			v.addError(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
+			v.addWarning(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
 		v.addInstruction(AssignUpvar(valueRxInt, upvar.localSlot))
@@ -203,29 +238,30 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 		return nil
 	}
 
-	functionBuilder := NewFunctionBuilder(n.Name)
-	v.addFunctionBuilder(*functionBuilder)
-	v.scope = v.scope.NewChildScope(true)
+	v.enterFunctionScope(n.Name, len(n.Params))
+
 	for _, param := range n.Params {
 		param.Visit(v)
 	}
 	for _, statement := range n.Body {
 		statement.Visit(v)
 	}
-	v.scope = v.scope.parent
-	v.buildFunctionProto()
+
+	functionSlot := v.exitFunctionScope()
 
 	slot := v.scope.DefineVariable(n.Name, false)
-	v.addInstruction(StoreVar(v.nextReg(), slot))
-	return nil
+	reg := v.nextReg()
+	v.addInstruction(Closure(reg, functionSlot))
+	v.addInstruction(StoreVar(reg, slot))
+	return reg
 }
 
 func (v *InstructionsVisitor) VisitBlock(n *ast.Block) any {
-	v.scope = v.scope.NewChildScope(false)
+	v.enterBlockScope()
 	for _, statement := range n.Statements {
 		statement.Visit(v)
 	}
-	v.scope = v.scope.parent
+	v.exitBlockScope()
 	return nil
 }
 
