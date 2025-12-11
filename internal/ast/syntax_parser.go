@@ -93,8 +93,13 @@ func (p *Parser) ParseStatement() Statement {
 	}
 
 	if t.Kind == lexer.Keyword && (t.Subkind == lexer.KeywordVar || t.Subkind == lexer.KeywordConst) {
+		return p.ParseDeclaration()
+	}
+
+	if t.Kind == lexer.Identifier && t.Subkind == lexer.IdentifierName {
 		return p.ParseAssignment()
 	}
+
 	expression := p.ParseExpression()
 	if expression == nil {
 		return nil
@@ -122,13 +127,13 @@ func (p *Parser) ParseFunction() Statement {
 		return nil
 	}
 
-	params := []Parameter{}
+	params := []Expression{}
 	for {
-		param := p.ParseParameter()
+		param := p.ParseExpression()
 		if param == nil {
 			break
 		}
-		params = append(params, *param)
+		params = append(params, param)
 		commaTok := p.peek(0)
 		if commaTok == nil || !(commaTok.Kind == lexer.Punctuator && commaTok.Subkind == lexer.Comma) {
 			break
@@ -146,15 +151,6 @@ func (p *Parser) ParseFunction() Statement {
 	}
 
 	return &Function{Name: idTok.Lexeme, Params: params, Body: *body, PosAt: kw.Pos}
-}
-
-func (p *Parser) ParseParameter() *Parameter {
-
-	idTok := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
-	if idTok == nil {
-		return nil
-	}
-	return &Parameter{Name: idTok.Lexeme, PosAt: idTok.Pos}
 }
 
 func (p *Parser) ParseBlock() *Block {
@@ -203,7 +199,7 @@ func (p *Parser) ParseReturn() Statement {
 	}
 }
 
-func (p *Parser) ParseAssignment() Statement {
+func (p *Parser) ParseDeclaration() *Declaration {
 	kw := p.eatExpected(lexer.Keyword, nil, "expected 'var' or 'const'")
 	if kw == nil {
 		return nil
@@ -235,8 +231,36 @@ func (p *Parser) ParseAssignment() Statement {
 		return nil
 	}
 
-	return &Assignment{
+	return &Declaration{
 		Specifier:  specifier,
+		Identifier: &Identifier{Name: idTok.Lexeme, PosAt: idTok.Pos},
+		Value:      value,
+		PosAt:      kw.Pos,
+	}
+}
+
+func (p *Parser) ParseAssignment() *Assignment {
+	idTok := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if idTok == nil {
+		return nil
+	}
+
+	eq := p.eatExpected(lexer.Punctuator, lexer.Assign, "expected '='")
+	if eq == nil {
+		return nil
+	}
+
+	value := p.ParseExpression()
+	if value == nil {
+		return nil
+	}
+
+	semicolon := p.eatExpected(lexer.Punctuator, lexer.StatementEnd, "expected ';'")
+	if semicolon == nil {
+		return nil
+	}
+
+	return &Assignment{
 		Identifier: &Identifier{Name: idTok.Lexeme, PosAt: idTok.Pos},
 		Value:      value,
 		PosAt:      idTok.Pos,
@@ -280,7 +304,7 @@ func (p *Parser) ParseCallExpr() Expression {
 	if rparen == nil {
 		return nil
 	}
-	return &CallExpr{Function: *identifier, Arguments: arguments, PosAt: lparen.Pos}
+	return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
 }
 
 func (p *Parser) ParseFactor() Expression {

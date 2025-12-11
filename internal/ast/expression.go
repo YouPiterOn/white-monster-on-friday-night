@@ -53,9 +53,9 @@ func (b *BinaryExpr) Visit(v Visitor[any]) any {
 }
 
 type CallExpr struct {
-	Function  Identifier
-	Arguments []Expression
-	PosAt     *lexer.SourcePos
+	Identifier Identifier
+	Arguments  []Expression
+	PosAt      *lexer.SourcePos
 }
 
 func (c *CallExpr) Pos() *lexer.SourcePos { return c.PosAt }

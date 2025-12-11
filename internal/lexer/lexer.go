@@ -338,11 +338,13 @@ func isIdentContinue(ch byte) bool {
 func operatorSubkind(ch byte) (OperatorSubkind, bool) {
 	switch ch {
 	case '+':
-		return Plus, true
+		return OperatorPlus, true
 	case '-':
-		return Minus, true
+		return OperatorMinus, true
 	case '*':
-		return Star, true
+		return OperatorStar, true
+	case '/':
+		return OperatorSlash, true
 	default:
 		return 0, false
 	}

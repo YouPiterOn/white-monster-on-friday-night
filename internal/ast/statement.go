@@ -18,8 +18,20 @@ func (b *Block) Visit(v Visitor[any]) any {
 	return v.VisitBlock(b)
 }
 
-type Assignment struct {
+type Declaration struct {
 	Specifier  lexer.KeywordSubkind
+	Identifier *Identifier
+	Value      Expression
+	PosAt      *lexer.SourcePos
+}
+
+func (d *Declaration) Pos() *lexer.SourcePos { return d.PosAt }
+func (d *Declaration) statementNode()        {}
+func (d *Declaration) Visit(v Visitor[any]) any {
+	return v.VisitDeclaration(d)
+}
+
+type Assignment struct {
 	Identifier *Identifier
 	Value      Expression
 	PosAt      *lexer.SourcePos

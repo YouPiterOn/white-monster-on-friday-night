@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"youpiteron.dev/white-monster-on-friday-night/internal/ast"
-	"youpiteron.dev/white-monster-on-friday-night/internal/debug"
+	"youpiteron.dev/white-monster-on-friday-night/internal/compiler"
 	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 )
 
@@ -48,6 +48,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	debugVisitor := debug.DebugVisitor{}
-	program.Visit(&debugVisitor)
+	instructionsVisitor := compiler.NewInstructionsVisitor()
+	program.Visit(instructionsVisitor)
+	if len(instructionsVisitor.Errors()) > 0 {
+		fmt.Printf("failed to generate instructions from file %s\n", path)
+		for _, error := range instructionsVisitor.Errors() {
+			fmt.Printf("  %s at %v\n", error.Message, error.Pos)
+		}
+		os.Exit(1)
+	}
+	for _, instruction := range instructionsVisitor.Instructions() {
+		fmt.Printf("instruction: %s\n", instruction.String())
+	}
 }

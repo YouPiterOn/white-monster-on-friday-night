@@ -2,6 +2,7 @@ package ast
 
 type Visitor[R any] interface {
 	VisitProgram(n *Program) R
+	VisitDeclaration(n *Declaration) R
 	VisitAssignment(n *Assignment) R
 	VisitReturn(n *Return) R
 	VisitNumberLiteral(n *NumberLiteral) R

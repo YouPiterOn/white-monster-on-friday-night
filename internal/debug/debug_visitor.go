@@ -17,9 +17,16 @@ func (v *DebugVisitor) VisitProgram(n *ast.Program) any {
 	return nil
 }
 
+func (v *DebugVisitor) VisitDeclaration(n *ast.Declaration) any {
+	fmt.Printf("declaration: %v\n", n.Pos())
+	fmt.Printf("  specifier: %v\n", n.Specifier)
+	n.Identifier.Visit(v)
+	n.Value.Visit(v)
+	return nil
+}
+
 func (v *DebugVisitor) VisitAssignment(n *ast.Assignment) any {
 	fmt.Printf("assignment: %v\n", n.Pos())
-	fmt.Printf("  specifier: %v\n", n.Specifier)
 	n.Identifier.Visit(v)
 	n.Value.Visit(v)
 	return nil
