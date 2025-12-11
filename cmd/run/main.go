@@ -57,7 +57,7 @@ func main() {
 		}
 		os.Exit(1)
 	}
-	for _, instruction := range instructionsVisitor.Instructions() {
-		fmt.Printf("instruction: %s\n", instruction.String())
+	for _, functionProto := range instructionsVisitor.FunctionProtos() {
+		fmt.Printf("function proto: %s\n", functionProto.String())
 	}
 }

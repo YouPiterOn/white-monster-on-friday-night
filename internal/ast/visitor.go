@@ -8,7 +8,7 @@ type Visitor[R any] interface {
 	VisitNumberLiteral(n *NumberLiteral) R
 	VisitIdentifier(n *Identifier) R
 	VisitBinaryExpr(n *BinaryExpr) R
-	VisitParameter(n *Parameter) R
+	VisitParam(n *Param) R
 	VisitFunction(n *Function) R
 	VisitBlock(n *Block) R
 	VisitCallExpr(n *CallExpr) R

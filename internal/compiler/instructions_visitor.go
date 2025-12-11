@@ -13,16 +13,17 @@ type SyntaxError struct {
 }
 
 type InstructionsVisitor struct {
-	instructions []Instruction
-	scope        *Scope
-	errors       []SyntaxError
-	reg          int
+	scope            *Scope
+	errors           []SyntaxError
+	reg              int
+	functionBuilders []FunctionBuilder
+	functionProtos   []FunctionProto
 }
 
 // ---------- Constructor ----------
 
 func NewInstructionsVisitor() *InstructionsVisitor {
-	return &InstructionsVisitor{scope: NewScope(), instructions: []Instruction{}, errors: []SyntaxError{}, reg: 0}
+	return &InstructionsVisitor{scope: nil, errors: []SyntaxError{}, reg: 0, functionBuilders: []FunctionBuilder{}, functionProtos: []FunctionProto{}}
 }
 
 // ---------- Helpers ----------
@@ -43,25 +44,49 @@ func (v *InstructionsVisitor) resetReg() int {
 	return reg
 }
 
+func (v *InstructionsVisitor) addInstruction(instruction Instruction) {
+	if len(v.functionBuilders) == 0 {
+		panic("COMPILER ERROR: no function proto found")
+	}
+	v.functionBuilders[len(v.functionBuilders)-1].AddInstruction(instruction)
+}
+
+func (v *InstructionsVisitor) addFunctionBuilder(functionBuilder FunctionBuilder) {
+	v.functionBuilders = append(v.functionBuilders, functionBuilder)
+}
+
+func (v *InstructionsVisitor) buildFunctionProto() {
+	if len(v.functionBuilders) == 0 {
+		panic("COMPILER ERROR: no function builder found")
+	}
+	functionBuilder := v.functionBuilders[len(v.functionBuilders)-1]
+	v.functionProtos = append(v.functionProtos, functionBuilder.Build())
+	v.functionBuilders = v.functionBuilders[:len(v.functionBuilders)-1]
+}
+
 // ---------- Getters ----------
 
 func (v *InstructionsVisitor) Errors() []SyntaxError {
 	return v.errors
 }
 
-func (v *InstructionsVisitor) Instructions() []Instruction {
-	return v.instructions
+func (v *InstructionsVisitor) FunctionProtos() []FunctionProto {
+	return v.functionProtos
 }
 
+// ---------- Visitor Implementations ----------
+
 func (v *InstructionsVisitor) VisitProgram(n *ast.Program) any {
+	v.scope = NewScope(true)
+	functionBuilder := NewFunctionBuilder("main")
+	v.addFunctionBuilder(*functionBuilder)
 	for _, statement := range n.Statements {
 		statement.Visit(v)
 		v.resetReg()
 	}
+	v.buildFunctionProto()
 	return nil
 }
-
-// ---------- Visitor Implementations ----------
 
 func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 	_, ok := v.scope.FindLocalVariable(n.Identifier.Name)
@@ -76,7 +101,7 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 	if !ok {
 		panic(fmt.Sprintf("COMPILER ERROR: value %v is not an integer", valueRxInt))
 	}
-	v.instructions = append(v.instructions, StoreVar(valueRxInt, slot))
+	v.addInstruction(StoreVar(valueRxInt, slot))
 
 	return nil
 }
@@ -97,14 +122,15 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 			v.addError(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
-		v.instructions = append(v.instructions, StoreVar(valueRxInt, localVar.slot))
+		v.addInstruction(StoreVar(valueRxInt, localVar.slot))
 	} else if upvar != nil {
 		if !upvar.mutable {
 			v.addError(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
-		v.instructions = append(v.instructions, AssignUpvar(valueRxInt, upvar.localSlot))
+		v.addInstruction(AssignUpvar(valueRxInt, upvar.localSlot))
 	}
+
 	return nil
 }
 
@@ -114,13 +140,13 @@ func (v *InstructionsVisitor) VisitReturn(n *ast.Return) any {
 	if !ok {
 		panic(fmt.Sprintf("COMPILER ERROR: value %v is not an integer", valueRxInt))
 	}
-	v.instructions = append(v.instructions, Return(valueRxInt))
+	v.addInstruction(Return(valueRxInt))
 	return nil
 }
 
 func (v *InstructionsVisitor) VisitNumberLiteral(n *ast.NumberLiteral) any {
 	reg := v.reg
-	v.instructions = append(v.instructions, LoadConst(reg, n.Value))
+	v.addInstruction(LoadConst(reg, n.Value))
 	v.reg++
 	return reg
 }
@@ -129,14 +155,15 @@ func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 	localVar, upvar, ok := v.scope.FindVariable(n.Name)
 	if !ok {
 		v.addError(fmt.Sprintf("variable %s not found", n.Name), n.Pos())
-		return nil
+		return 0
 	}
+	reg := v.nextReg()
 	if localVar != nil {
-		v.instructions = append(v.instructions, LoadVar(v.resetReg(), localVar.slot))
+		v.addInstruction(LoadVar(reg, localVar.slot))
 	} else if upvar != nil {
-		v.instructions = append(v.instructions, LoadUpvar(v.resetReg(), upvar.localSlot))
+		v.addInstruction(LoadUpvar(reg, upvar.localSlot))
 	}
-	return nil
+	return reg
 }
 
 func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
@@ -153,26 +180,52 @@ func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
 	reg := v.nextReg()
 	switch n.Operator {
 	case lexer.OperatorPlus:
-		v.instructions = append(v.instructions, Add(reg, leftRxInt, rightRxInt))
+		v.addInstruction(Add(reg, leftRxInt, rightRxInt))
 	case lexer.OperatorMinus:
-		v.instructions = append(v.instructions, Sub(reg, leftRxInt, rightRxInt))
+		v.addInstruction(Sub(reg, leftRxInt, rightRxInt))
 	case lexer.OperatorStar:
-		v.instructions = append(v.instructions, Mul(reg, leftRxInt, rightRxInt))
+		v.addInstruction(Mul(reg, leftRxInt, rightRxInt))
 	case lexer.OperatorSlash:
-		v.instructions = append(v.instructions, Div(reg, leftRxInt, rightRxInt))
+		v.addInstruction(Div(reg, leftRxInt, rightRxInt))
 	}
 	return reg
 }
 
-func (v *InstructionsVisitor) VisitParameter(n *ast.Parameter) any {
+func (v *InstructionsVisitor) VisitParam(n *ast.Param) any {
+	v.scope.DefineVariable(n.Name, false)
 	return nil
 }
 
 func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
+	_, ok := v.scope.FindLocalVariable(n.Name)
+	if ok {
+		v.addError(fmt.Sprintf("variable %s already defined", n.Name), n.Pos())
+		return nil
+	}
+
+	functionBuilder := NewFunctionBuilder(n.Name)
+	v.addFunctionBuilder(*functionBuilder)
+	v.scope = v.scope.NewChildScope(true)
+	for _, param := range n.Params {
+		param.Visit(v)
+	}
+	for _, statement := range n.Body {
+		statement.Visit(v)
+	}
+	v.scope = v.scope.parent
+	v.buildFunctionProto()
+
+	slot := v.scope.DefineVariable(n.Name, false)
+	v.addInstruction(StoreVar(v.nextReg(), slot))
 	return nil
 }
 
 func (v *InstructionsVisitor) VisitBlock(n *ast.Block) any {
+	v.scope = v.scope.NewChildScope(false)
+	for _, statement := range n.Statements {
+		statement.Visit(v)
+	}
+	v.scope = v.scope.parent
 	return nil
 }
 
@@ -191,6 +244,7 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 	if !ok {
 		panic(fmt.Sprintf("COMPILER ERROR: identifier registry %v is not an integer", identifierRxInt))
 	}
-	v.instructions = append(v.instructions, Call(identifierRxInt, args))
-	return nil
+	resultReg := v.nextReg()
+	v.addInstruction(Call(resultReg, identifierRxInt, args))
+	return resultReg
 }

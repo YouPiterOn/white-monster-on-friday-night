@@ -2,10 +2,20 @@ package ast
 
 import "youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 
+type Param struct {
+	Name  string
+	PosAt *lexer.SourcePos
+}
+
+func (p *Param) Pos() *lexer.SourcePos { return p.PosAt }
+func (p *Param) Visit(v Visitor[any]) any {
+	return v.VisitParam(p)
+}
+
 type Function struct {
 	Name   string
-	Params []Expression
-	Body   Block
+	Params []Param
+	Body   []Statement
 	PosAt  *lexer.SourcePos
 }
 

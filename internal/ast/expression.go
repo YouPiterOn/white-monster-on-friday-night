@@ -64,3 +64,15 @@ func (c *CallExpr) expressionNode()       {}
 func (c *CallExpr) Visit(v Visitor[any]) any {
 	return v.VisitCallExpr(c)
 }
+
+type Block struct {
+	Statements []Statement
+	PosAt      *lexer.SourcePos
+}
+
+func (b *Block) Pos() *lexer.SourcePos { return b.PosAt }
+func (b *Block) statementNode()        {}
+func (b *Block) expressionNode()       {}
+func (b *Block) Visit(v Visitor[any]) any {
+	return v.VisitBlock(b)
+}

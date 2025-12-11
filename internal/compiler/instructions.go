@@ -117,9 +117,9 @@ func Return(reg int) Instruction {
 	}
 }
 
-func Call(reg int, args []int) Instruction {
+func Call(resultReg int, functionReg int, args []int) Instruction {
 	return Instruction{
 		OpCode: CALL,
-		Args:   append([]int{reg}, args...),
+		Args:   append([]int{resultReg, functionReg}, args...),
 	}
 }

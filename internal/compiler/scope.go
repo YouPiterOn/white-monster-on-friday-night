@@ -16,18 +16,32 @@ type Upvar struct {
 
 type Scope struct {
 	parent           *Scope
+	isFunctionScope  bool
 	currentVarSlot   int
 	currentUpvarSlot int
 	variables        map[string]Variable
 	upvarsMap        map[string]Upvar
 }
 
-func NewScope() *Scope {
-	return &Scope{variables: make(map[string]Variable), upvarsMap: make(map[string]Upvar), currentVarSlot: 0, currentUpvarSlot: 0}
+func NewScope(isFunctionScope bool) *Scope {
+	return &Scope{isFunctionScope: isFunctionScope, variables: make(map[string]Variable), upvarsMap: make(map[string]Upvar), currentVarSlot: 0, currentUpvarSlot: 0}
 }
 
-func (s *Scope) NewChildScope() *Scope {
-	return &Scope{parent: s, variables: make(map[string]Variable), upvarsMap: make(map[string]Upvar), currentVarSlot: 0, currentUpvarSlot: 0}
+func (s *Scope) NewChildScope(isFunctionScope bool) *Scope {
+	currentVarSlot := 0
+	currentUpvarSlot := 0
+	if isFunctionScope {
+		currentVarSlot = s.currentVarSlot
+		currentUpvarSlot = s.currentUpvarSlot
+	}
+	return &Scope{
+		parent:           s,
+		isFunctionScope:  isFunctionScope,
+		variables:        make(map[string]Variable),
+		upvarsMap:        make(map[string]Upvar),
+		currentVarSlot:   currentVarSlot,
+		currentUpvarSlot: currentUpvarSlot,
+	}
 }
 
 func (s *Scope) DefineVariable(name string, mutable bool) int {
@@ -42,10 +56,20 @@ func (s *Scope) FindLocalVariable(name string) (*Variable, bool) {
 	if ok {
 		return &variable, true
 	}
+	if !s.isFunctionScope {
+		variable, ok := s.parent.FindLocalVariable(name)
+		if ok {
+			return variable, true
+		}
+	}
+
 	return nil, false
 }
 
 func (s *Scope) FindUpvar(name string) (*Upvar, bool) {
+	if !s.isFunctionScope {
+		return s.parent.FindUpvar(name)
+	}
 	upvar, ok := s.upvarsMap[name]
 	if ok {
 		return &upvar, true

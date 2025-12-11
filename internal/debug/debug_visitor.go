@@ -58,12 +58,6 @@ func (v *DebugVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
 	return nil
 }
 
-func (v *DebugVisitor) VisitParameter(n *ast.Parameter) any {
-	fmt.Printf("parameter: %v\n", n.Pos())
-	fmt.Printf("  name: %s\n", n.Name)
-	return nil
-}
-
 func (v *DebugVisitor) VisitFunction(n *ast.Function) any {
 	fmt.Printf("function: %v\n", n.Pos())
 	fmt.Printf("  name: %s\n", n.Name)
@@ -84,7 +78,7 @@ func (v *DebugVisitor) VisitBlock(n *ast.Block) any {
 
 func (v *DebugVisitor) VisitCallExpr(n *ast.CallExpr) any {
 	fmt.Printf("call expression: %v\n", n.Pos())
-	n.Function.Visit(v)
+	n.Identifier.Visit(v)
 	for _, argument := range n.Arguments {
 		argument.Visit(v)
 	}

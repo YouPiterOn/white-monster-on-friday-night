@@ -127,13 +127,13 @@ func (p *Parser) ParseFunction() Statement {
 		return nil
 	}
 
-	params := []Expression{}
+	params := []Param{}
 	for {
-		param := p.ParseExpression()
+		param := p.ParseParam()
 		if param == nil {
 			break
 		}
-		params = append(params, param)
+		params = append(params, *param)
 		commaTok := p.peek(0)
 		if commaTok == nil || !(commaTok.Kind == lexer.Punctuator && commaTok.Subkind == lexer.Comma) {
 			break
@@ -145,12 +145,44 @@ func (p *Parser) ParseFunction() Statement {
 		return nil
 	}
 
-	body := p.ParseBlock()
-	if body == nil {
+	body := p.ParseBody()
+
+	return &Function{Name: idTok.Lexeme, Params: params, Body: body, PosAt: kw.Pos}
+}
+
+func (p *Parser) ParseParam() *Param {
+	idTok := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if idTok == nil {
 		return nil
 	}
+	return &Param{Name: idTok.Lexeme, PosAt: idTok.Pos}
+}
 
-	return &Function{Name: idTok.Lexeme, Params: params, Body: *body, PosAt: kw.Pos}
+func (p *Parser) ParseBody() []Statement {
+	lbrace := p.eatExpected(lexer.Punctuator, lexer.BlockStart, "expected '{'")
+	if lbrace == nil {
+		return nil
+	}
+	statements := []Statement{}
+	for {
+		t := p.peek(0)
+		if t == nil {
+			break
+		}
+		if t.Kind == lexer.Punctuator && t.Subkind == lexer.BlockEnd {
+			break
+		}
+		statement := p.ParseStatement()
+		if statement == nil {
+			break
+		}
+		statements = append(statements, statement)
+	}
+	rbrace := p.eatExpected(lexer.Punctuator, lexer.BlockEnd, "expected '}'")
+	if rbrace == nil {
+		return nil
+	}
+	return statements
 }
 
 func (p *Parser) ParseBlock() *Block {
@@ -338,12 +370,12 @@ func (p *Parser) ParseNumberLiteral() Expression {
 }
 
 func (p *Parser) ParseIdentifier() *Identifier {
-	t := p.eat()
-	if t == nil {
+	idTok := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if idTok == nil {
 		return nil
 	}
 
-	return &Identifier{Name: t.Lexeme, PosAt: t.Pos}
+	return &Identifier{Name: idTok.Lexeme, PosAt: idTok.Pos}
 }
 
 func (p *Parser) ParseBinaryExpr() Expression {
