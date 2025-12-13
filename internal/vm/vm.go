@@ -13,12 +13,12 @@ func NewVM(functionProtos []compiler.FunctionProto) *VM {
 	return &VM{frames: make([]Frame, 0), functionProtos: functionProtos}
 }
 
-func (v *VM) Run() Value {
+func (v *VM) Run() compiler.Value {
 	if len(v.functionProtos) == 0 {
 		panic("VM ERROR: no functions to run")
 	}
 	functionProto := &v.functionProtos[len(v.functionProtos)-1]
-	closure := NewClosure(functionProto)
+	closure := compiler.NewClosure(functionProto)
 	frame := NewFrame(closure)
 	v.frames = append(v.frames, *frame)
 	retval := v.runFunction(functionProto)
@@ -29,8 +29,8 @@ func (v *VM) currentFrame() *Frame {
 	return &v.frames[len(v.frames)-1]
 }
 
-func (v *VM) runFunction(functionProto *compiler.FunctionProto) *Value {
-	var retval *Value = nil
+func (v *VM) runFunction(functionProto *compiler.FunctionProto) *compiler.Value {
+	var retval *compiler.Value = nil
 	for _, instruction := range functionProto.Instructions {
 		if retval != nil {
 			break
@@ -67,7 +67,7 @@ func (v *VM) runFunction(functionProto *compiler.FunctionProto) *Value {
 }
 
 func (v *VM) opLoadConst(args []int) {
-	value := Value{Kind: VAL_INT, Int: args[1]}
+	value := v.currentFrame().GetConstant(args[1])
 	v.currentFrame().SetRegister(args[0], value)
 }
 
@@ -94,60 +94,60 @@ func (v *VM) opAssignUpvar(args []int) {
 func (v *VM) opAdd(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.Kind != VAL_INT || right.Kind != VAL_INT {
+	if left.Kind != compiler.VAL_INT || right.Kind != compiler.VAL_INT {
 		panic("VM ERROR: invalid operand type for addition")
 	}
-	result := Value{Kind: VAL_INT, Int: left.Int + right.Int}
+	result := compiler.Value{Kind: compiler.VAL_INT, Int: left.Int + right.Int}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
 func (v *VM) opSub(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.Kind != VAL_INT || right.Kind != VAL_INT {
+	if left.Kind != compiler.VAL_INT || right.Kind != compiler.VAL_INT {
 		panic("VM ERROR: invalid operand type for subtraction")
 	}
-	result := Value{Kind: VAL_INT, Int: left.Int - right.Int}
+	result := compiler.Value{Kind: compiler.VAL_INT, Int: left.Int - right.Int}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
 func (v *VM) opMul(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.Kind != VAL_INT || right.Kind != VAL_INT {
+	if left.Kind != compiler.VAL_INT || right.Kind != compiler.VAL_INT {
 		panic("VM ERROR: invalid operand type for multiplication")
 	}
-	result := Value{Kind: VAL_INT, Int: left.Int * right.Int}
+	result := compiler.Value{Kind: compiler.VAL_INT, Int: left.Int * right.Int}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
 func (v *VM) opDiv(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.Kind != VAL_INT || right.Kind != VAL_INT {
+	if left.Kind != compiler.VAL_INT || right.Kind != compiler.VAL_INT {
 		panic("VM ERROR: invalid operand type for division")
 	}
-	result := Value{Kind: VAL_INT, Int: left.Int / right.Int}
+	result := compiler.Value{Kind: compiler.VAL_INT, Int: left.Int / right.Int}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
 func (v *VM) opClosure(args []int) {
 	proto := v.functionProtos[args[1]]
-	closure := &Closure{proto: &proto, upvalues: make([]*UpvalueCell, len(proto.Upvars))}
+	closure := &compiler.Closure{Proto: &proto, Upvalues: make([]*compiler.UpvalueCell, len(proto.Upvars))}
 	for i, upvar := range proto.Upvars {
 		if upvar.IsFromParent {
-			closure.upvalues[i] = &UpvalueCell{Ptr: v.currentFrame().GetLocal(upvar.SlotInParent)}
+			closure.Upvalues[i] = &compiler.UpvalueCell{Ptr: v.currentFrame().GetLocal(upvar.SlotInParent)}
 		} else {
-			closure.upvalues[i] = &UpvalueCell{Ptr: v.currentFrame().GetUpvar(upvar.SlotInParent)}
+			closure.Upvalues[i] = &compiler.UpvalueCell{Ptr: v.currentFrame().GetUpvar(upvar.SlotInParent)}
 		}
 	}
-	value := Value{Kind: VAL_CLOSURE, Closure: *closure}
+	value := compiler.Value{Kind: compiler.VAL_CLOSURE, Closure: *closure}
 	v.currentFrame().SetRegister(args[0], value)
 }
 
 func (v *VM) opCall(args []int) {
 	function := v.currentFrame().GetRegister(args[1])
-	if function.Kind != VAL_CLOSURE {
+	if function.Kind != compiler.VAL_CLOSURE {
 		panic("VM ERROR: invalid operand type for call")
 	}
 	frame := NewFrame(&function.Closure)
@@ -156,11 +156,11 @@ func (v *VM) opCall(args []int) {
 		frame.SetLocal(i, *value)
 	}
 	v.frames = append(v.frames, *frame)
-	functionProto := function.Closure.proto
+	functionProto := function.Closure.Proto
 	retval := v.runFunction(functionProto)
 	v.currentFrame().SetRegister(args[0], *retval)
 }
 
-func (v *VM) opReturn(args []int) *Value {
+func (v *VM) opReturn(args []int) *compiler.Value {
 	return v.currentFrame().GetRegister(args[0])
 }

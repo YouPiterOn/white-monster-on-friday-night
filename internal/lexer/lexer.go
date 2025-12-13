@@ -286,6 +286,32 @@ func (l *Lexer) flushIdentifier() (*Token, *LexError) {
 		}, nil
 	}
 
+	// constants
+	if lex == "true" {
+		return &Token{
+			Lexeme:  lex,
+			Kind:    Constant,
+			Subkind: Boolean,
+			Pos:     &pos,
+		}, nil
+	}
+	if lex == "false" {
+		return &Token{
+			Lexeme:  lex,
+			Kind:    Constant,
+			Subkind: Boolean,
+			Pos:     &pos,
+		}, nil
+	}
+	if lex == "null" {
+		return &Token{
+			Lexeme:  lex,
+			Kind:    Constant,
+			Subkind: Null,
+			Pos:     &pos,
+		}, nil
+	}
+
 	// identifier
 	return &Token{
 		Lexeme:  lex,
@@ -306,7 +332,7 @@ func (l *Lexer) flushNumber() (*Token, *LexError) {
 	return &Token{
 		Lexeme:  lex,
 		Kind:    Constant,
-		Subkind: Numeric,
+		Subkind: Integer,
 		Pos:     &pos,
 	}, nil
 }

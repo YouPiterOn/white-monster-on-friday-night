@@ -1,48 +1,54 @@
 package vm
 
+import "youpiteron.dev/white-monster-on-friday-night/internal/compiler"
+
 type Frame struct {
-	closure   *Closure
-	locals    []Value
-	registers []Value
+	closure   *compiler.Closure
+	locals    []compiler.Value
+	registers []compiler.Value
 }
 
-func NewFrame(closure *Closure) *Frame {
-	return &Frame{closure: closure, locals: make([]Value, closure.proto.NumLocals), registers: make([]Value, 0)}
+func NewFrame(closure *compiler.Closure) *Frame {
+	return &Frame{closure: closure, locals: make([]compiler.Value, closure.Proto.NumLocals), registers: make([]compiler.Value, 0)}
 }
 
-func (f *Frame) GetLocal(slot int) *Value {
+func (f *Frame) GetLocal(slot int) *compiler.Value {
 	return &f.locals[slot]
 }
 
-func (f *Frame) GetRegister(slot int) *Value {
+func (f *Frame) GetRegister(slot int) *compiler.Value {
 	return &f.registers[slot]
 }
 
-func (f *Frame) GetUpvar(slot int) *Value {
-	if slot >= len(f.closure.upvalues) {
+func (f *Frame) GetUpvar(slot int) *compiler.Value {
+	if slot >= len(f.closure.Upvalues) {
 		panic("VM ERROR: upvar slot out of bounds")
 	}
-	return f.closure.upvalues[slot].Ptr
+	return f.closure.Upvalues[slot].Ptr
 }
 
-func (f *Frame) SetLocal(slot int, value Value) {
+func (f *Frame) SetLocal(slot int, value compiler.Value) {
 	if slot >= len(f.locals) {
-		newLocals := make([]Value, (slot+1)*2)
+		newLocals := make([]compiler.Value, (slot+1)*2)
 		copy(newLocals, f.locals)
 		f.locals = newLocals
 	}
 	f.locals[slot] = value
 }
 
-func (f *Frame) SetRegister(slot int, value Value) {
+func (f *Frame) SetRegister(slot int, value compiler.Value) {
 	if slot >= len(f.registers) {
-		newRegisters := make([]Value, (slot+1)*2)
+		newRegisters := make([]compiler.Value, (slot+1)*2)
 		copy(newRegisters, f.registers)
 		f.registers = newRegisters
 	}
 	f.registers[slot] = value
 }
 
-func (f *Frame) SetUpvar(slot int, value Value) {
-	*f.closure.upvalues[slot].Ptr = value
+func (f *Frame) SetUpvar(slot int, value compiler.Value) {
+	*f.closure.Upvalues[slot].Ptr = value
+}
+
+func (f *Frame) GetConstant(index int) compiler.Value {
+	return f.closure.Proto.Constants[index]
 }

@@ -12,17 +12,42 @@ type Factor interface {
 	factorNode()
 }
 
-type NumberLiteral struct {
+type IntLiteral struct {
 	Value int
 	PosAt *lexer.SourcePos
 }
 
-func (n *NumberLiteral) Pos() *lexer.SourcePos { return n.PosAt }
-func (n *NumberLiteral) statementNode()        {}
-func (n *NumberLiteral) expressionNode()       {}
-func (n *NumberLiteral) factorNode()           {}
-func (n *NumberLiteral) Visit(v Visitor[any]) any {
-	return v.VisitNumberLiteral(n)
+func (n *IntLiteral) Pos() *lexer.SourcePos { return n.PosAt }
+func (n *IntLiteral) statementNode()        {}
+func (n *IntLiteral) expressionNode()       {}
+func (n *IntLiteral) factorNode()           {}
+func (n *IntLiteral) Visit(v Visitor[any]) any {
+	return v.VisitIntLiteral(n)
+}
+
+type BoolLiteral struct {
+	Value bool
+	PosAt *lexer.SourcePos
+}
+
+func (b *BoolLiteral) Pos() *lexer.SourcePos { return b.PosAt }
+func (b *BoolLiteral) statementNode()        {}
+func (b *BoolLiteral) expressionNode()       {}
+func (b *BoolLiteral) factorNode()           {}
+func (b *BoolLiteral) Visit(v Visitor[any]) any {
+	return v.VisitBoolLiteral(b)
+}
+
+type NullLiteral struct {
+	PosAt *lexer.SourcePos
+}
+
+func (n *NullLiteral) Pos() *lexer.SourcePos { return n.PosAt }
+func (n *NullLiteral) statementNode()        {}
+func (n *NullLiteral) expressionNode()       {}
+func (n *NullLiteral) factorNode()           {}
+func (n *NullLiteral) Visit(v Visitor[any]) any {
+	return v.VisitNullLiteral(n)
 }
 
 type Identifier struct {

@@ -339,14 +339,22 @@ func (p *Parser) ParseCallExpr() Expression {
 	return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
 }
 
-func (p *Parser) ParseFactor() Expression {
+func (p *Parser) ParseFactor() Factor {
 	t := p.peek(0)
 	if t == nil {
 		return nil
 	}
 
-	if t.Kind == lexer.Constant && t.Subkind == lexer.Numeric {
-		return p.ParseNumberLiteral()
+	if t.Kind == lexer.Constant && t.Subkind == lexer.Integer {
+		return p.ParseIntLiteral()
+	}
+
+	if t.Kind == lexer.Constant && t.Subkind == lexer.Boolean {
+		return p.ParseBoolLiteral()
+	}
+
+	if t.Kind == lexer.Constant && t.Subkind == lexer.Null {
+		return p.ParseNullLiteral()
 	}
 
 	if t.Kind == lexer.Identifier {
@@ -357,16 +365,46 @@ func (p *Parser) ParseFactor() Expression {
 	return nil
 }
 
-func (p *Parser) ParseNumberLiteral() Expression {
+// ---------- Literals ----------
+
+func (p *Parser) ParseIntLiteral() *IntLiteral {
 	t := p.eat()
 	if t == nil {
 		return nil
 	}
 
-	return &NumberLiteral{
+	return &IntLiteral{
 		Value: atoi(t.Lexeme),
 		PosAt: t.Pos,
 	}
+}
+
+func (p *Parser) ParseBoolLiteral() *BoolLiteral {
+	t := p.eat()
+	if t == nil {
+		return nil
+	}
+
+	if t.Lexeme != "true" && t.Lexeme != "false" {
+		p.addError(fmt.Sprintf("expected 'true' or 'false' but got %s", t.Lexeme), t.Pos)
+		return nil
+	}
+
+	return &BoolLiteral{Value: t.Lexeme == "true", PosAt: t.Pos}
+}
+
+func (p *Parser) ParseNullLiteral() *NullLiteral {
+	t := p.eat()
+	if t == nil {
+		return nil
+	}
+
+	if t.Lexeme != "null" {
+		p.addError(fmt.Sprintf("expected 'null' but got %s", t.Lexeme), t.Pos)
+		return nil
+	}
+
+	return &NullLiteral{PosAt: t.Pos}
 }
 
 func (p *Parser) ParseIdentifier() *Identifier {

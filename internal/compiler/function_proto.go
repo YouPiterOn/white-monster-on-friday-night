@@ -15,14 +15,20 @@ type FunctionBuilder struct {
 	Name         string
 	NumParams    int
 	Instructions []Instruction
+	Constants    []Value
 }
 
 func NewFunctionBuilder(name string, numParams int) *FunctionBuilder {
-	return &FunctionBuilder{Name: name, NumParams: numParams, Instructions: []Instruction{}}
+	return &FunctionBuilder{Name: name, NumParams: numParams, Instructions: []Instruction{}, Constants: []Value{}}
 }
 
 func (f *FunctionBuilder) AddInstruction(instruction Instruction) {
 	f.Instructions = append(f.Instructions, instruction)
+}
+
+func (f *FunctionBuilder) AddConstant(value Value) int {
+	f.Constants = append(f.Constants, value)
+	return len(f.Constants) - 1
 }
 
 func (f *FunctionBuilder) Build(scope *Scope) FunctionProto {
@@ -31,7 +37,7 @@ func (f *FunctionBuilder) Build(scope *Scope) FunctionProto {
 	for _, upvar := range scope.upvarsMap {
 		upvars = append(upvars, UpvarDesc{SlotInParent: upvar.slotInParent, IsFromParent: upvar.isFromParent})
 	}
-	return FunctionProto{Name: f.Name, NumLocals: numLocals, NumParams: f.NumParams, Instructions: f.Instructions, Upvars: upvars}
+	return FunctionProto{Name: f.Name, NumLocals: numLocals, NumParams: f.NumParams, Instructions: f.Instructions, Upvars: upvars, Constants: f.Constants}
 }
 
 type FunctionProto struct {
@@ -40,6 +46,7 @@ type FunctionProto struct {
 	NumParams    int
 	Instructions []Instruction
 	Upvars       []UpvarDesc
+	Constants    []Value
 }
 
 func (f *FunctionProto) String() string {

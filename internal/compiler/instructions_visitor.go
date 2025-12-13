@@ -51,9 +51,16 @@ func (v *InstructionsVisitor) resetReg() int {
 
 func (v *InstructionsVisitor) addInstruction(instruction Instruction) {
 	if len(v.functionBuilders) == 0 {
-		panic("COMPILER ERROR: no function proto found")
+		panic("COMPILER ERROR: no function builder found")
 	}
 	v.functionBuilders[len(v.functionBuilders)-1].AddInstruction(instruction)
+}
+
+func (v *InstructionsVisitor) addConstant(value Value) int {
+	if len(v.functionBuilders) == 0 {
+		panic("COMPILER ERROR: no function builder found")
+	}
+	return v.functionBuilders[len(v.functionBuilders)-1].AddConstant(value)
 }
 
 func (v *InstructionsVisitor) addFunctionBuilder(functionBuilder FunctionBuilder) {
@@ -136,7 +143,7 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 	if !ok {
 		panic(fmt.Sprintf("COMPILER ERROR: value %v is not an integer", valueRxInt))
 	}
-	v.addInstruction(StoreVar(valueRxInt, slot))
+	v.addInstruction(InstrStoreVar(valueRxInt, slot))
 
 	return nil
 }
@@ -157,13 +164,13 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 			v.addWarning(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
-		v.addInstruction(StoreVar(valueRxInt, localVar.slot))
+		v.addInstruction(InstrStoreVar(valueRxInt, localVar.slot))
 	} else if upvar != nil {
 		if !upvar.mutable {
 			v.addWarning(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
-		v.addInstruction(AssignUpvar(valueRxInt, upvar.localSlot))
+		v.addInstruction(InstrAssignUpvar(valueRxInt, upvar.localSlot))
 	}
 
 	return nil
@@ -175,14 +182,28 @@ func (v *InstructionsVisitor) VisitReturn(n *ast.Return) any {
 	if !ok {
 		panic(fmt.Sprintf("COMPILER ERROR: value %v is not an integer", valueRxInt))
 	}
-	v.addInstruction(Return(valueRxInt))
+	v.addInstruction(InstrReturn(valueRxInt))
 	return nil
 }
 
-func (v *InstructionsVisitor) VisitNumberLiteral(n *ast.NumberLiteral) any {
-	reg := v.reg
-	v.addInstruction(LoadConst(reg, n.Value))
-	v.reg++
+func (v *InstructionsVisitor) VisitIntLiteral(n *ast.IntLiteral) any {
+	reg := v.nextReg()
+	constIndex := v.addConstant(NewIntValue(n.Value))
+	v.addInstruction(InstrLoadConst(reg, constIndex))
+	return reg
+}
+
+func (v *InstructionsVisitor) VisitBoolLiteral(n *ast.BoolLiteral) any {
+	reg := v.nextReg()
+	constIndex := v.addConstant(NewBoolValue(n.Value))
+	v.addInstruction(InstrLoadConst(reg, constIndex))
+	return reg
+}
+
+func (v *InstructionsVisitor) VisitNullLiteral(n *ast.NullLiteral) any {
+	reg := v.nextReg()
+	constIndex := v.addConstant(NewNullValue())
+	v.addInstruction(InstrLoadConst(reg, constIndex))
 	return reg
 }
 
@@ -194,9 +215,9 @@ func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 	}
 	reg := v.nextReg()
 	if localVar != nil {
-		v.addInstruction(LoadVar(reg, localVar.slot))
+		v.addInstruction(InstrLoadVar(reg, localVar.slot))
 	} else if upvar != nil {
-		v.addInstruction(LoadUpvar(reg, upvar.localSlot))
+		v.addInstruction(InstrLoadUpvar(reg, upvar.localSlot))
 	}
 	return reg
 }
@@ -215,13 +236,13 @@ func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
 	reg := v.nextReg()
 	switch n.Operator {
 	case lexer.OperatorPlus:
-		v.addInstruction(Add(reg, leftRxInt, rightRxInt))
+		v.addInstruction(InstrAdd(reg, leftRxInt, rightRxInt))
 	case lexer.OperatorMinus:
-		v.addInstruction(Sub(reg, leftRxInt, rightRxInt))
+		v.addInstruction(InstrSub(reg, leftRxInt, rightRxInt))
 	case lexer.OperatorStar:
-		v.addInstruction(Mul(reg, leftRxInt, rightRxInt))
+		v.addInstruction(InstrMul(reg, leftRxInt, rightRxInt))
 	case lexer.OperatorSlash:
-		v.addInstruction(Div(reg, leftRxInt, rightRxInt))
+		v.addInstruction(InstrDiv(reg, leftRxInt, rightRxInt))
 	}
 	return reg
 }
@@ -251,8 +272,8 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 
 	slot := v.scope.DefineVariable(n.Name, false)
 	reg := v.nextReg()
-	v.addInstruction(Closure(reg, functionSlot))
-	v.addInstruction(StoreVar(reg, slot))
+	v.addInstruction(InstrClosure(reg, functionSlot))
+	v.addInstruction(InstrStoreVar(reg, slot))
 	return reg
 }
 
@@ -281,6 +302,6 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 		panic(fmt.Sprintf("COMPILER ERROR: identifier registry %v is not an integer", identifierRxInt))
 	}
 	resultReg := v.nextReg()
-	v.addInstruction(Call(resultReg, identifierRxInt, args))
+	v.addInstruction(InstrCall(resultReg, identifierRxInt, args))
 	return resultReg
 }

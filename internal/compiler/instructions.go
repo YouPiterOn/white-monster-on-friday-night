@@ -47,84 +47,84 @@ func (o OpCode) String() string {
 	}[o]
 }
 
-func LoadConst(reg int, value int) Instruction {
+func InstrLoadConst(reg int, constIndex int) Instruction {
 	return Instruction{
 		OpCode: LOAD_CONST,
-		Args:   []int{reg, value},
+		Args:   []int{reg, constIndex},
 	}
 }
 
-func LoadVar(reg int, slot int) Instruction {
+func InstrLoadVar(reg int, slot int) Instruction {
 	return Instruction{
 		OpCode: LOAD_VAR,
 		Args:   []int{reg, slot},
 	}
 }
 
-func LoadUpvar(reg int, slot int) Instruction {
+func InstrLoadUpvar(reg int, slot int) Instruction {
 	return Instruction{
 		OpCode: LOAD_UPVAR,
 		Args:   []int{reg, slot},
 	}
 }
 
-func StoreVar(reg int, slot int) Instruction {
+func InstrStoreVar(reg int, slot int) Instruction {
 	return Instruction{
 		OpCode: STORE_VAR,
 		Args:   []int{reg, slot},
 	}
 }
 
-func AssignUpvar(reg int, slot int) Instruction {
+func InstrAssignUpvar(reg int, slot int) Instruction {
 	return Instruction{
 		OpCode: ASSIGN_UPVAR,
 		Args:   []int{reg, slot},
 	}
 }
 
-func Add(regResult int, regLeft int, regRight int) Instruction {
+func InstrAdd(regResult int, regLeft int, regRight int) Instruction {
 	return Instruction{
 		OpCode: ADD,
 		Args:   []int{regResult, regLeft, regRight},
 	}
 }
 
-func Sub(regResult int, regLeft int, regRight int) Instruction {
+func InstrSub(regResult int, regLeft int, regRight int) Instruction {
 	return Instruction{
 		OpCode: SUB,
 		Args:   []int{regResult, regLeft, regRight},
 	}
 }
 
-func Mul(regResult int, regLeft int, regRight int) Instruction {
+func InstrMul(regResult int, regLeft int, regRight int) Instruction {
 	return Instruction{
 		OpCode: MUL,
 		Args:   []int{regResult, regLeft, regRight},
 	}
 }
 
-func Div(regResult int, regLeft int, regRight int) Instruction {
+func InstrDiv(regResult int, regLeft int, regRight int) Instruction {
 	return Instruction{
 		OpCode: DIV,
 		Args:   []int{regResult, regLeft, regRight},
 	}
 }
 
-func Closure(resultReg int, functionSlot int) Instruction {
+func InstrClosure(resultReg int, functionSlot int) Instruction {
 	return Instruction{
 		OpCode: CLOSURE,
 		Args:   []int{resultReg, functionSlot},
 	}
 }
 
-func Return(reg int) Instruction {
+func InstrReturn(reg int) Instruction {
 	return Instruction{
 		OpCode: RETURN,
 		Args:   []int{reg},
 	}
 }
 
-func Call(resultReg int, functionReg int, args []int) Instruction {
+func InstrCall(resultReg int, functionReg int, args []int) Instruction {
 	return Instruction{
 		OpCode: CALL,
 		Args:   append([]int{resultReg, functionReg}, args...),

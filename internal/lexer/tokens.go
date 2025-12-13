@@ -79,12 +79,16 @@ func (k PunctuatorSubkind) String() string {
 type ConstantSubkind int
 
 const (
-	Numeric ConstantSubkind = iota
+	Integer ConstantSubkind = iota
+	Boolean
+	Null
 )
 
 func (k ConstantSubkind) String() string {
 	return [...]string{
 		"numeric",
+		"boolean",
+		"null",
 	}[k]
 }
 

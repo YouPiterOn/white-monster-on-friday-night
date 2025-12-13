@@ -38,7 +38,7 @@ func (v *DebugVisitor) VisitReturn(n *ast.Return) any {
 	return nil
 }
 
-func (v *DebugVisitor) VisitNumberLiteral(n *ast.NumberLiteral) any {
+func (v *DebugVisitor) VisitIntLiteral(n *ast.IntLiteral) any {
 	fmt.Printf("number literal: %v\n", n.Pos())
 	fmt.Printf("  value: %d\n", n.Value)
 	return nil
