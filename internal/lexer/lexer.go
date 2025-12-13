@@ -148,6 +148,19 @@ func (l *Lexer) Lex(input string) LexResult {
 				continue
 			}
 
+			// punctuator ':'
+			if ch == ':' {
+				pos := l.posSpan(1)
+				l.next()
+				tokens = append(tokens, Token{
+					Lexeme:  ":",
+					Kind:    Punctuator,
+					Subkind: Colon,
+					Pos:     &pos,
+				})
+				continue
+			}
+
 			// operator
 			if op, ok := operatorSubkind(ch); ok {
 				pos := l.posSpan(1)
@@ -312,6 +325,15 @@ func (l *Lexer) flushIdentifier() (*Token, *LexError) {
 		}, nil
 	}
 
+	if subkind, ok := typeSubkind(lex); ok {
+		return &Token{
+			Lexeme:  lex,
+			Kind:    Type,
+			Subkind: subkind,
+			Pos:     &pos,
+		}, nil
+	}
+
 	// identifier
 	return &Token{
 		Lexeme:  lex,
@@ -374,6 +396,18 @@ func operatorSubkind(ch byte) (OperatorSubkind, bool) {
 	default:
 		return 0, false
 	}
+}
+
+func typeSubkind(lex string) (TypeSubkind, bool) {
+	switch lex {
+	case "int":
+		return TypeInt, true
+	case "bool":
+		return TypeBool, true
+	case "null":
+		return TypeNull, true
+	}
+	return 0, false
 }
 
 // ---------- Cursor management ----------

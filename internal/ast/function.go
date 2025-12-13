@@ -3,8 +3,9 @@ package ast
 import "youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 
 type Param struct {
-	Name  string
-	PosAt *lexer.SourcePos
+	Name   string
+	TypeOf lexer.TypeSubkind
+	PosAt  *lexer.SourcePos
 }
 
 func (p *Param) Pos() *lexer.SourcePos { return p.PosAt }
@@ -13,10 +14,11 @@ func (p *Param) Visit(v Visitor[any]) any {
 }
 
 type Function struct {
-	Name   string
-	Params []Param
-	Body   []Statement
-	PosAt  *lexer.SourcePos
+	Name       string
+	Params     []Param
+	Body       []Statement
+	ReturnType lexer.TypeSubkind
+	PosAt      *lexer.SourcePos
 }
 
 func (f *Function) Pos() *lexer.SourcePos { return f.PosAt }

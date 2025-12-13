@@ -12,6 +12,20 @@ type SyntaxError struct {
 	Pos     *lexer.SourcePos
 }
 
+type VisitExprResult struct {
+	Reg      int
+	TypeOf   ValueType
+	Callable *Callable
+}
+
+func CastVisitExprResult(result any) VisitExprResult {
+	resultVisitExpr, ok := result.(VisitExprResult)
+	if !ok {
+		panic(fmt.Sprintf("COMPILER ERROR: result %v is not a VisitExprResult", resultVisitExpr))
+	}
+	return resultVisitExpr
+}
+
 type InstructionsVisitor struct {
 	scope            *Scope
 	errors           []SyntaxError
@@ -63,6 +77,13 @@ func (v *InstructionsVisitor) addConstant(value Value) int {
 	return v.functionBuilders[len(v.functionBuilders)-1].AddConstant(value)
 }
 
+func (v *InstructionsVisitor) addParam(param ValueType) {
+	if len(v.functionBuilders) == 0 {
+		panic("COMPILER ERROR: no function builder found")
+	}
+	v.functionBuilders[len(v.functionBuilders)-1].AddParam(param)
+}
+
 func (v *InstructionsVisitor) addFunctionBuilder(functionBuilder FunctionBuilder) {
 	v.functionBuilders = append(v.functionBuilders, functionBuilder)
 }
@@ -77,13 +98,20 @@ func (v *InstructionsVisitor) buildFunctionProto(scope *Scope) int {
 	return len(v.functionProtos) - 1
 }
 
-func (v *InstructionsVisitor) enterFunctionScope(name string, numParams int) {
+func (v *InstructionsVisitor) currentFunctionBuilder() *FunctionBuilder {
+	if len(v.functionBuilders) == 0 {
+		panic("COMPILER ERROR: no function builder found")
+	}
+	return &v.functionBuilders[len(v.functionBuilders)-1]
+}
+
+func (v *InstructionsVisitor) enterFunctionScope(name string, returnType ValueType) {
 	if v.scope == nil {
 		v.scope = NewScope(true)
 	} else {
 		v.scope = v.scope.NewChildScope(true)
 	}
-	v.addFunctionBuilder(*NewFunctionBuilder(name, numParams))
+	v.addFunctionBuilder(*NewFunctionBuilder(name, returnType))
 }
 
 func (v *InstructionsVisitor) exitFunctionScope() int {
@@ -121,7 +149,7 @@ func (v *InstructionsVisitor) FunctionProtos() []FunctionProto {
 // ---------- Visitor Implementations ----------
 
 func (v *InstructionsVisitor) VisitProgram(n *ast.Program) any {
-	v.enterFunctionScope("main", 0)
+	v.enterFunctionScope("main", VAL_INT)
 	for _, statement := range n.Statements {
 		statement.Visit(v)
 		v.resetReg()
@@ -136,14 +164,12 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 		v.addError(fmt.Sprintf("variable %s already defined", n.Identifier.Name), n.Identifier.Pos())
 		return nil
 	}
-	slot := v.scope.DefineVariable(n.Identifier.Name, n.Specifier == lexer.KeywordVar)
-	valueRx := n.Value.Visit(v)
+	result := n.Value.Visit(v)
+	resultVisitExpr := CastVisitExprResult(result)
 
-	valueRxInt, ok := valueRx.(int)
-	if !ok {
-		panic(fmt.Sprintf("COMPILER ERROR: value %v is not an integer", valueRxInt))
-	}
-	v.addInstruction(InstrStoreVar(valueRxInt, slot))
+	slot := v.scope.DefineVariable(n.Identifier.Name, n.Specifier == lexer.KeywordVar, resultVisitExpr.TypeOf)
+
+	v.addInstruction(InstrStoreVar(resultVisitExpr.Reg, slot))
 
 	return nil
 }
@@ -154,35 +180,43 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 		v.addError(fmt.Sprintf("variable %s not found", n.Identifier.Name), n.Identifier.Pos())
 		return nil
 	}
-	valueRx := n.Value.Visit(v)
-	valueRxInt, ok := valueRx.(int)
-	if !ok {
-		panic(fmt.Sprintf("COMPILER ERROR: value %v is not an integer", valueRxInt))
-	}
+	result := n.Value.Visit(v)
+	resultVisitExpr := CastVisitExprResult(result)
+
 	if localVar != nil {
-		if !localVar.mutable {
-			v.addWarning(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
+		if !localVar.Mutable {
+			v.addError(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
-		v.addInstruction(InstrStoreVar(valueRxInt, localVar.slot))
+		if resultVisitExpr.TypeOf != localVar.TypeOf {
+			v.addError(fmt.Sprintf("variable %s is of type %s, but assignment is of type %s", n.Identifier.Name, localVar.TypeOf, resultVisitExpr.TypeOf), n.Identifier.Pos())
+			return nil
+		}
+		v.addInstruction(InstrStoreVar(resultVisitExpr.Reg, localVar.Slot))
 	} else if upvar != nil {
-		if !upvar.mutable {
-			v.addWarning(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
+		if !upvar.Mutable {
+			v.addError(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
-		v.addInstruction(InstrAssignUpvar(valueRxInt, upvar.localSlot))
+		if resultVisitExpr.TypeOf != upvar.TypeOf {
+			v.addError(fmt.Sprintf("variable %s is of type %s, but assignment is of type %s", n.Identifier.Name, upvar.TypeOf, resultVisitExpr.TypeOf), n.Identifier.Pos())
+			return nil
+		}
+		v.addInstruction(InstrAssignUpvar(resultVisitExpr.Reg, upvar.LocalSlot))
 	}
 
 	return nil
 }
 
 func (v *InstructionsVisitor) VisitReturn(n *ast.Return) any {
-	valueRx := n.Value.Visit(v)
-	valueRxInt, ok := valueRx.(int)
-	if !ok {
-		panic(fmt.Sprintf("COMPILER ERROR: value %v is not an integer", valueRxInt))
+	result := n.Value.Visit(v)
+	resultVisitExpr := CastVisitExprResult(result)
+	builder := v.currentFunctionBuilder()
+	if resultVisitExpr.TypeOf != builder.ReturnType {
+		v.addError(fmt.Sprintf("return value must be of type %s, but got %s", builder.ReturnType, resultVisitExpr.TypeOf), n.Value.Pos())
+		return nil
 	}
-	v.addInstruction(InstrReturn(valueRxInt))
+	v.addInstruction(InstrReturn(resultVisitExpr.Reg))
 	return nil
 }
 
@@ -190,65 +224,70 @@ func (v *InstructionsVisitor) VisitIntLiteral(n *ast.IntLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.addConstant(NewIntValue(n.Value))
 	v.addInstruction(InstrLoadConst(reg, constIndex))
-	return reg
+	return VisitExprResult{Reg: reg, TypeOf: VAL_INT}
 }
 
 func (v *InstructionsVisitor) VisitBoolLiteral(n *ast.BoolLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.addConstant(NewBoolValue(n.Value))
 	v.addInstruction(InstrLoadConst(reg, constIndex))
-	return reg
+	return VisitExprResult{Reg: reg, TypeOf: VAL_BOOL}
 }
 
 func (v *InstructionsVisitor) VisitNullLiteral(n *ast.NullLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.addConstant(NewNullValue())
 	v.addInstruction(InstrLoadConst(reg, constIndex))
-	return reg
+	return VisitExprResult{Reg: reg, TypeOf: VAL_NULL}
 }
 
 func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 	localVar, upvar, ok := v.scope.FindVariable(n.Name)
 	if !ok {
 		v.addError(fmt.Sprintf("variable %s not found", n.Name), n.Pos())
-		return 0
+		return VisitExprResult{}
 	}
 	reg := v.nextReg()
+	var typeOf ValueType
+	var callable *Callable
 	if localVar != nil {
-		v.addInstruction(InstrLoadVar(reg, localVar.slot))
+		v.addInstruction(InstrLoadVar(reg, localVar.Slot))
+		typeOf = localVar.TypeOf
+		callable = localVar.Callable
 	} else if upvar != nil {
-		v.addInstruction(InstrLoadUpvar(reg, upvar.localSlot))
+		v.addInstruction(InstrLoadUpvar(reg, upvar.LocalSlot))
+		typeOf = upvar.TypeOf
+		callable = upvar.Callable
 	}
-	return reg
+	return VisitExprResult{Reg: reg, TypeOf: typeOf, Callable: callable}
 }
 
 func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
-	leftRx := n.Left.Visit(v)
-	leftRxInt, ok := leftRx.(int)
-	if !ok {
-		panic(fmt.Sprintf("COMPILER ERROR: left value %v is not an integer", leftRxInt))
-	}
-	rightRx := n.Right.Visit(v)
-	rightRxInt, ok := rightRx.(int)
-	if !ok {
-		panic(fmt.Sprintf("COMPILER ERROR: right value %v is not an integer", rightRxInt))
+	leftResult := n.Left.Visit(v)
+	leftVisitExpr := CastVisitExprResult(leftResult)
+	rightResult := n.Right.Visit(v)
+	rightVisitExpr := CastVisitExprResult(rightResult)
+	if leftVisitExpr.TypeOf != rightVisitExpr.TypeOf {
+		v.addError(fmt.Sprintf("left and right expressions must be of the same type, but got %s and %s", leftVisitExpr.TypeOf, rightVisitExpr.TypeOf), n.Pos())
+		return VisitExprResult{}
 	}
 	reg := v.nextReg()
 	switch n.Operator {
 	case lexer.OperatorPlus:
-		v.addInstruction(InstrAdd(reg, leftRxInt, rightRxInt))
+		v.addInstruction(InstrAdd(reg, leftVisitExpr.Reg, rightVisitExpr.Reg))
 	case lexer.OperatorMinus:
-		v.addInstruction(InstrSub(reg, leftRxInt, rightRxInt))
+		v.addInstruction(InstrSub(reg, leftVisitExpr.Reg, rightVisitExpr.Reg))
 	case lexer.OperatorStar:
-		v.addInstruction(InstrMul(reg, leftRxInt, rightRxInt))
+		v.addInstruction(InstrMul(reg, leftVisitExpr.Reg, rightVisitExpr.Reg))
 	case lexer.OperatorSlash:
-		v.addInstruction(InstrDiv(reg, leftRxInt, rightRxInt))
+		v.addInstruction(InstrDiv(reg, leftVisitExpr.Reg, rightVisitExpr.Reg))
 	}
-	return reg
+	return VisitExprResult{Reg: reg, TypeOf: leftVisitExpr.TypeOf}
 }
 
 func (v *InstructionsVisitor) VisitParam(n *ast.Param) any {
-	v.scope.DefineVariable(n.Name, false)
+	v.addParam(ValueTypeFromTypeSubkind(n.TypeOf))
+	v.scope.DefineVariable(n.Name, false, ValueTypeFromTypeSubkind(n.TypeOf))
 	return nil
 }
 
@@ -256,10 +295,10 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 	_, ok := v.scope.FindLocalVariable(n.Name)
 	if ok {
 		v.addError(fmt.Sprintf("variable %s already defined", n.Name), n.Pos())
-		return nil
+		return VisitExprResult{}
 	}
 
-	v.enterFunctionScope(n.Name, len(n.Params))
+	v.enterFunctionScope(n.Name, ValueTypeFromTypeSubkind(n.ReturnType))
 
 	for _, param := range n.Params {
 		param.Visit(v)
@@ -268,13 +307,15 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 		statement.Visit(v)
 	}
 
+	builder := v.currentFunctionBuilder()
+
 	functionSlot := v.exitFunctionScope()
 
-	slot := v.scope.DefineVariable(n.Name, false)
+	slot := v.scope.DefineCallableVariable(n.Name, false, VAL_CLOSURE, builder.Params, builder.ReturnType)
 	reg := v.nextReg()
 	v.addInstruction(InstrClosure(reg, functionSlot))
 	v.addInstruction(InstrStoreVar(reg, slot))
-	return reg
+	return VisitExprResult{Reg: reg, TypeOf: VAL_CLOSURE}
 }
 
 func (v *InstructionsVisitor) VisitBlock(n *ast.Block) any {
@@ -287,21 +328,44 @@ func (v *InstructionsVisitor) VisitBlock(n *ast.Block) any {
 }
 
 func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
+	result := n.Identifier.Visit(v)
+	resultVisitExpr := CastVisitExprResult(result)
+	if resultVisitExpr.TypeOf != VAL_CLOSURE {
+		v.addError(fmt.Sprintf("function call must be of type closure, but got %s", resultVisitExpr.TypeOf), n.Identifier.Pos())
+		return VisitExprResult{}
+	}
+	if resultVisitExpr.Callable == nil {
+		v.addError(fmt.Sprintf("function %s is not callable", n.Identifier.Name), n.Identifier.Pos())
+		return VisitExprResult{}
+	}
+
 	args := []int{}
-	for _, argument := range n.Arguments {
-		argumentRx := argument.Visit(v)
-		argumentRxInt, ok := argumentRx.(int)
-		if !ok {
-			panic(fmt.Sprintf("COMPILER ERROR: argument registry %v is not an integer", argumentRxInt))
+	isError := false
+
+	if len(n.Arguments) != len(resultVisitExpr.Callable.CallArgs) {
+		v.addError(fmt.Sprintf("function %s takes %d arguments, but got %d", n.Identifier.Name, len(resultVisitExpr.Callable.CallArgs), len(n.Arguments)), n.Identifier.Pos())
+		isError = true
+	}
+
+	for i, argument := range n.Arguments {
+		paramType := resultVisitExpr.Callable.CallArgs[i]
+
+		argumentResult := argument.Visit(v)
+		argumentVisitExpr := CastVisitExprResult(argumentResult)
+
+		if argumentVisitExpr.TypeOf != paramType {
+			v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", i, paramType, argumentVisitExpr.TypeOf), argument.Pos())
+			isError = true
+			continue
 		}
-		args = append(args, argumentRxInt)
+		args = append(args, argumentVisitExpr.Reg)
 	}
-	identifierRx := n.Identifier.Visit(v)
-	identifierRxInt, ok := identifierRx.(int)
-	if !ok {
-		panic(fmt.Sprintf("COMPILER ERROR: identifier registry %v is not an integer", identifierRxInt))
+
+	if isError {
+		return VisitExprResult{}
 	}
+
 	resultReg := v.nextReg()
-	v.addInstruction(InstrCall(resultReg, identifierRxInt, args))
-	return resultReg
+	v.addInstruction(InstrCall(resultReg, resultVisitExpr.Reg, args))
+	return VisitExprResult{Reg: resultReg, TypeOf: resultVisitExpr.Callable.ReturnType}
 }

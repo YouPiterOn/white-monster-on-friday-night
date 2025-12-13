@@ -94,40 +94,40 @@ func (v *VM) opAssignUpvar(args []int) {
 func (v *VM) opAdd(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.Kind != compiler.VAL_INT || right.Kind != compiler.VAL_INT {
+	if left.TypeOf != compiler.VAL_INT || right.TypeOf != compiler.VAL_INT {
 		panic("VM ERROR: invalid operand type for addition")
 	}
-	result := compiler.Value{Kind: compiler.VAL_INT, Int: left.Int + right.Int}
+	result := compiler.Value{TypeOf: compiler.VAL_INT, Int: left.Int + right.Int}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
 func (v *VM) opSub(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.Kind != compiler.VAL_INT || right.Kind != compiler.VAL_INT {
+	if left.TypeOf != compiler.VAL_INT || right.TypeOf != compiler.VAL_INT {
 		panic("VM ERROR: invalid operand type for subtraction")
 	}
-	result := compiler.Value{Kind: compiler.VAL_INT, Int: left.Int - right.Int}
+	result := compiler.Value{TypeOf: compiler.VAL_INT, Int: left.Int - right.Int}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
 func (v *VM) opMul(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.Kind != compiler.VAL_INT || right.Kind != compiler.VAL_INT {
+	if left.TypeOf != compiler.VAL_INT || right.TypeOf != compiler.VAL_INT {
 		panic("VM ERROR: invalid operand type for multiplication")
 	}
-	result := compiler.Value{Kind: compiler.VAL_INT, Int: left.Int * right.Int}
+	result := compiler.Value{TypeOf: compiler.VAL_INT, Int: left.Int * right.Int}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
 func (v *VM) opDiv(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.Kind != compiler.VAL_INT || right.Kind != compiler.VAL_INT {
+	if left.TypeOf != compiler.VAL_INT || right.TypeOf != compiler.VAL_INT {
 		panic("VM ERROR: invalid operand type for division")
 	}
-	result := compiler.Value{Kind: compiler.VAL_INT, Int: left.Int / right.Int}
+	result := compiler.Value{TypeOf: compiler.VAL_INT, Int: left.Int / right.Int}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
@@ -141,13 +141,13 @@ func (v *VM) opClosure(args []int) {
 			closure.Upvalues[i] = &compiler.UpvalueCell{Ptr: v.currentFrame().GetUpvar(upvar.SlotInParent)}
 		}
 	}
-	value := compiler.Value{Kind: compiler.VAL_CLOSURE, Closure: *closure}
+	value := compiler.Value{TypeOf: compiler.VAL_CLOSURE, Closure: *closure}
 	v.currentFrame().SetRegister(args[0], value)
 }
 
 func (v *VM) opCall(args []int) {
 	function := v.currentFrame().GetRegister(args[1])
-	if function.Kind != compiler.VAL_CLOSURE {
+	if function.TypeOf != compiler.VAL_CLOSURE {
 		panic("VM ERROR: invalid operand type for call")
 	}
 	frame := NewFrame(&function.Closure)

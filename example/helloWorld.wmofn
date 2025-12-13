@@ -8,7 +8,7 @@ a = 60;
 
 const b = 321;
 
-function addToA(other) {
+function addToA(other: int): int {
   return a + other;
 }
 

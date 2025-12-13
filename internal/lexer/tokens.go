@@ -10,6 +10,7 @@ const (
 	Punctuator
 	Constant
 	Operator
+	Type
 )
 
 func (k TokenKind) String() string {
@@ -19,6 +20,7 @@ func (k TokenKind) String() string {
 		"punctuator",
 		"constant",
 		"operator",
+		"type",
 	}[k]
 }
 
@@ -62,6 +64,7 @@ const (
 	ParenClose
 	StatementEnd
 	Comma
+	Colon
 )
 
 func (k PunctuatorSubkind) String() string {
@@ -73,6 +76,7 @@ func (k PunctuatorSubkind) String() string {
 		")",
 		";",
 		",",
+		":",
 	}[k]
 }
 
@@ -110,6 +114,22 @@ func (k OperatorSubkind) String() string {
 	}[k]
 }
 
+type TypeSubkind int
+
+const (
+	TypeInt TypeSubkind = iota
+	TypeBool
+	TypeNull
+)
+
+func (k TypeSubkind) String() string {
+	return [...]string{
+		"int",
+		"bool",
+		"null",
+	}[k]
+}
+
 // ---- Source positions ----
 
 type BasePos struct {
@@ -124,7 +144,7 @@ type SourcePos struct {
 }
 
 func (p SourcePos) String() string {
-	return fmt.Sprintf("SourcePos{Offset: %d, Line: %d, Column: %d, Length: %d}", p.Offset, p.Line, p.Column, p.Length)
+	return fmt.Sprintf("Offset: %d, Line: %d, Column: %d, Length: %d", p.Offset, p.Line, p.Column, p.Length)
 }
 
 // ---- Token ----

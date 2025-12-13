@@ -1,17 +1,26 @@
 package compiler
 
+type Callable struct {
+	CallArgs   []ValueType
+	ReturnType ValueType
+}
+
 type Variable struct {
-	name    string
-	slot    int
-	mutable bool
+	Name     string
+	Slot     int
+	Mutable  bool
+	TypeOf   ValueType
+	Callable *Callable
 }
 
 type Upvar struct {
-	name         string
-	mutable      bool
-	localSlot    int
-	slotInParent int
-	isFromParent bool
+	Name         string
+	Mutable      bool
+	LocalSlot    int
+	SlotInParent int
+	IsFromParent bool
+	TypeOf       ValueType
+	Callable     *Callable
 }
 
 type Scope struct {
@@ -44,9 +53,16 @@ func (s *Scope) NewChildScope(isFunctionScope bool) *Scope {
 	}
 }
 
-func (s *Scope) DefineVariable(name string, mutable bool) int {
+func (s *Scope) DefineVariable(name string, mutable bool, typeOf ValueType) int {
 	slot := s.currentVarSlot
-	s.variables[name] = Variable{name: name, slot: slot, mutable: mutable}
+	s.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, Callable: nil}
+	s.currentVarSlot++
+	return slot
+}
+
+func (s *Scope) DefineCallableVariable(name string, mutable bool, typeOf ValueType, callArgs []ValueType, returnType ValueType) int {
+	slot := s.currentVarSlot
+	s.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, Callable: &Callable{CallArgs: callArgs, ReturnType: returnType}}
 	s.currentVarSlot++
 	return slot
 }
@@ -80,14 +96,28 @@ func (s *Scope) FindUpvar(name string) (*Upvar, bool) {
 
 	parentLocal, ok := s.parent.FindLocalVariable(name)
 	if ok {
-		upvar := Upvar{name: name, mutable: parentLocal.mutable, localSlot: s.currentUpvarSlot, slotInParent: parentLocal.slot, isFromParent: true}
+		upvar := Upvar{
+			Name:         name,
+			Mutable:      parentLocal.Mutable,
+			LocalSlot:    s.currentUpvarSlot,
+			SlotInParent: parentLocal.Slot,
+			IsFromParent: true,
+			TypeOf:       parentLocal.TypeOf,
+		}
 		s.upvarsMap[name] = upvar
 		s.currentUpvarSlot++
 		return &upvar, true
 	}
 	parentUpvar, ok := s.parent.FindUpvar(name)
 	if ok {
-		upvar := Upvar{name: name, mutable: parentUpvar.mutable, localSlot: s.currentUpvarSlot, slotInParent: parentUpvar.slotInParent, isFromParent: false}
+		upvar := Upvar{
+			Name:         name,
+			Mutable:      parentUpvar.Mutable,
+			LocalSlot:    s.currentUpvarSlot,
+			SlotInParent: parentUpvar.SlotInParent,
+			IsFromParent: false,
+			TypeOf:       parentUpvar.TypeOf,
+		}
 		s.upvarsMap[name] = upvar
 		s.currentUpvarSlot++
 		return &upvar, true

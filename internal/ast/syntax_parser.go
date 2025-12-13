@@ -48,8 +48,8 @@ func (p *Parser) eatExpected(kind lexer.TokenKind, subkind any, msg string) *lex
 		return p.eat()
 	}
 
-	got := fmt.Sprintf("%v(%v)", t.Kind, t.Subkind)
-	want := fmt.Sprintf("%v(%v)", kind, subkind)
+	got := fmt.Sprintf("%v \"%v\"", t.Kind, t.Subkind)
+	want := fmt.Sprintf("%v \"%v\"", kind, subkind)
 	p.addError(fmt.Sprintf("expected %s but got %s", want, got), t.Pos)
 	return nil
 }
@@ -144,10 +144,17 @@ func (p *Parser) ParseFunction() Statement {
 	if rparen == nil {
 		return nil
 	}
-
+	colon := p.eatExpected(lexer.Punctuator, lexer.Colon, "expected ':'")
+	if colon == nil {
+		return nil
+	}
+	typeTok := p.eatExpected(lexer.Type, nil, "expected type")
+	if typeTok == nil {
+		return nil
+	}
 	body := p.ParseBody()
 
-	return &Function{Name: idTok.Lexeme, Params: params, Body: body, PosAt: kw.Pos}
+	return &Function{Name: idTok.Lexeme, Params: params, Body: body, ReturnType: typeTok.Subkind.(lexer.TypeSubkind), PosAt: kw.Pos}
 }
 
 func (p *Parser) ParseParam() *Param {
@@ -155,7 +162,15 @@ func (p *Parser) ParseParam() *Param {
 	if idTok == nil {
 		return nil
 	}
-	return &Param{Name: idTok.Lexeme, PosAt: idTok.Pos}
+	colon := p.eatExpected(lexer.Punctuator, lexer.Colon, "expected ':'")
+	if colon == nil {
+		return nil
+	}
+	typeTok := p.eatExpected(lexer.Type, nil, "expected type")
+	if typeTok == nil {
+		return nil
+	}
+	return &Param{Name: idTok.Lexeme, TypeOf: typeTok.Subkind.(lexer.TypeSubkind), PosAt: idTok.Pos}
 }
 
 func (p *Parser) ParseBody() []Statement {
