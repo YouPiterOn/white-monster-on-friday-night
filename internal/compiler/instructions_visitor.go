@@ -4,13 +4,9 @@ import (
 	"fmt"
 
 	"youpiteron.dev/white-monster-on-friday-night/internal/ast"
+	"youpiteron.dev/white-monster-on-friday-night/internal/common"
 	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 )
-
-type SyntaxError struct {
-	Message string
-	Pos     *lexer.SourcePos
-}
 
 type VisitExprResult struct {
 	Reg      int
@@ -28,8 +24,8 @@ func CastVisitExprResult(result any) VisitExprResult {
 
 type InstructionsVisitor struct {
 	scope            *Scope
-	errors           []SyntaxError
-	warnings         []SyntaxError
+	errors           []common.Error
+	warnings         []common.Error
 	reg              int
 	functionBuilders []FunctionBuilder
 	functionProtos   []FunctionProto
@@ -38,17 +34,17 @@ type InstructionsVisitor struct {
 // ---------- Constructor ----------
 
 func NewInstructionsVisitor() *InstructionsVisitor {
-	return &InstructionsVisitor{scope: nil, errors: []SyntaxError{}, warnings: []SyntaxError{}, reg: 0, functionBuilders: []FunctionBuilder{}, functionProtos: []FunctionProto{}}
+	return &InstructionsVisitor{scope: nil, errors: []common.Error{}, warnings: []common.Error{}, reg: 0, functionBuilders: []FunctionBuilder{}, functionProtos: []FunctionProto{}}
 }
 
 // ---------- Helpers ----------
 
-func (v *InstructionsVisitor) addError(message string, pos *lexer.SourcePos) {
-	v.errors = append(v.errors, SyntaxError{Message: message, Pos: pos})
+func (v *InstructionsVisitor) addError(message string, pos *common.SourcePos) {
+	v.errors = append(v.errors, common.Error{Message: message, Pos: pos})
 }
 
-func (v *InstructionsVisitor) addWarning(message string, pos *lexer.SourcePos) {
-	v.warnings = append(v.warnings, SyntaxError{Message: message, Pos: pos})
+func (v *InstructionsVisitor) addWarning(message string, pos *common.SourcePos) {
+	v.warnings = append(v.warnings, common.Error{Message: message, Pos: pos})
 }
 
 func (v *InstructionsVisitor) nextReg() int {
@@ -134,11 +130,11 @@ func (v *InstructionsVisitor) exitBlockScope() {
 
 // ---------- Getters ----------
 
-func (v *InstructionsVisitor) Errors() []SyntaxError {
+func (v *InstructionsVisitor) Errors() []common.Error {
 	return v.errors
 }
 
-func (v *InstructionsVisitor) Warnings() []SyntaxError {
+func (v *InstructionsVisitor) Warnings() []common.Error {
 	return v.warnings
 }
 

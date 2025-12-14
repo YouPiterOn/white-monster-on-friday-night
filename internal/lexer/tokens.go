@@ -1,6 +1,10 @@
 package lexer
 
-import "fmt"
+import (
+	"fmt"
+
+	"youpiteron.dev/white-monster-on-friday-night/internal/common"
+)
 
 type TokenKind int
 
@@ -130,30 +134,13 @@ func (k TypeSubkind) String() string {
 	}[k]
 }
 
-// ---- Source positions ----
-
-type BasePos struct {
-	Offset int
-	Line   int
-	Column int
-}
-
-type SourcePos struct {
-	BasePos
-	Length int
-}
-
-func (p SourcePos) String() string {
-	return fmt.Sprintf("Offset: %d, Line: %d, Column: %d, Length: %d", p.Offset, p.Line, p.Column, p.Length)
-}
-
 // ---- Token ----
 
 type Token struct {
 	Lexeme  string
 	Kind    TokenKind
 	Subkind any
-	Pos     *SourcePos
+	Pos     *common.SourcePos
 }
 
 func (t Token) String() string {

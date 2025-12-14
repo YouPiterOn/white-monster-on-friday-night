@@ -3,18 +3,14 @@ package ast
 import (
 	"fmt"
 
+	"youpiteron.dev/white-monster-on-friday-night/internal/common"
 	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 )
-
-type SyntaxError struct {
-	Message string
-	Pos     *lexer.SourcePos
-}
 
 type Parser struct {
 	tokens []lexer.Token
 	idx    int
-	Errors []SyntaxError
+	Errors []common.Error
 }
 
 func NewParser(tokens []lexer.Token) *Parser {
@@ -54,8 +50,8 @@ func (p *Parser) eatExpected(kind lexer.TokenKind, subkind any, msg string) *lex
 	return nil
 }
 
-func (p *Parser) addError(msg string, pos *lexer.SourcePos) {
-	p.Errors = append(p.Errors, SyntaxError{
+func (p *Parser) addError(msg string, pos *common.SourcePos) {
+	p.Errors = append(p.Errors, common.Error{
 		Message: msg,
 		Pos:     pos,
 	})

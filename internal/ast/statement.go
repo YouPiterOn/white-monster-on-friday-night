@@ -1,6 +1,9 @@
 package ast
 
-import "youpiteron.dev/white-monster-on-friday-night/internal/lexer"
+import (
+	"youpiteron.dev/white-monster-on-friday-night/internal/common"
+	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
+)
 
 type Statement interface {
 	Node
@@ -13,11 +16,11 @@ type Declaration struct {
 	TypeOf     lexer.TypeSubkind
 	Identifier *Identifier
 	Value      Expression
-	PosAt      *lexer.SourcePos
+	PosAt      *common.SourcePos
 }
 
-func (d *Declaration) Pos() *lexer.SourcePos { return d.PosAt }
-func (d *Declaration) statementNode()        {}
+func (d *Declaration) Pos() *common.SourcePos { return d.PosAt }
+func (d *Declaration) statementNode()         {}
 func (d *Declaration) Visit(v Visitor[any]) any {
 	return v.VisitDeclaration(d)
 }
@@ -25,22 +28,22 @@ func (d *Declaration) Visit(v Visitor[any]) any {
 type Assignment struct {
 	Identifier *Identifier
 	Value      Expression
-	PosAt      *lexer.SourcePos
+	PosAt      *common.SourcePos
 }
 
-func (a *Assignment) Pos() *lexer.SourcePos { return a.PosAt }
-func (a *Assignment) statementNode()        {}
+func (a *Assignment) Pos() *common.SourcePos { return a.PosAt }
+func (a *Assignment) statementNode()         {}
 func (a *Assignment) Visit(v Visitor[any]) any {
 	return v.VisitAssignment(a)
 }
 
 type Return struct {
 	Value Expression
-	PosAt *lexer.SourcePos
+	PosAt *common.SourcePos
 }
 
-func (r *Return) Pos() *lexer.SourcePos { return r.PosAt }
-func (r *Return) statementNode()        {}
+func (r *Return) Pos() *common.SourcePos { return r.PosAt }
+func (r *Return) statementNode()         {}
 func (r *Return) Visit(v Visitor[any]) any {
 	return v.VisitReturn(r)
 }

@@ -1,13 +1,10 @@
 package lexer
 
-import "fmt"
+import (
+	"fmt"
 
-// ---------- Errors ----------
-
-type LexError struct {
-	Message string
-	Pos     SourcePos
-}
+	"youpiteron.dev/white-monster-on-friday-night/internal/common"
+)
 
 // ---------- Lexer ----------
 
@@ -21,7 +18,7 @@ const (
 
 type LexResult struct {
 	Tokens []Token
-	Errors []LexError
+	Errors []common.Error
 }
 
 type Lexer struct {
@@ -32,7 +29,7 @@ type Lexer struct {
 
 	state    LexerState
 	buf      string
-	startPos *BasePos
+	startPos *common.BasePos
 }
 
 func NewLexer() *Lexer {
@@ -43,7 +40,7 @@ func (l *Lexer) Lex(input string) LexResult {
 	l.reset(input)
 
 	var tokens []Token
-	var errors []LexError
+	var errors []common.Error
 
 	for !l.eof() {
 		ch := l.peek()
@@ -190,9 +187,9 @@ func (l *Lexer) Lex(input string) LexResult {
 
 			// unexpected character
 			pos := l.posSpan(1)
-			errors = append(errors, LexError{
+			errors = append(errors, common.Error{
 				Message: fmt.Sprintf("unexpected symbol '%c'", ch),
-				Pos:     pos,
+				Pos:     &pos,
 			})
 			l.next()
 			continue
@@ -257,7 +254,7 @@ func (l *Lexer) Lex(input string) LexResult {
 
 // ---------- Flushers ----------
 
-func (l *Lexer) flushIdentifier() (*Token, *LexError) {
+func (l *Lexer) flushIdentifier() (*Token, *common.Error) {
 	if l.startPos == nil {
 		return nil, nil
 	}
@@ -343,7 +340,7 @@ func (l *Lexer) flushIdentifier() (*Token, *LexError) {
 	}, nil
 }
 
-func (l *Lexer) flushNumber() (*Token, *LexError) {
+func (l *Lexer) flushNumber() (*Token, *common.Error) {
 	if l.startPos == nil {
 		return nil, nil
 	}
@@ -436,9 +433,9 @@ func (l *Lexer) next() byte {
 
 // ---------- Position helpers ----------
 
-func (l *Lexer) posSpan(length int) SourcePos {
-	return SourcePos{
-		BasePos: BasePos{
+func (l *Lexer) posSpan(length int) common.SourcePos {
+	return common.SourcePos{
+		BasePos: common.BasePos{
 			Offset: l.idx,
 			Line:   l.line,
 			Column: l.col,
@@ -447,17 +444,17 @@ func (l *Lexer) posSpan(length int) SourcePos {
 	}
 }
 
-func (l *Lexer) capturePos() *BasePos {
-	return &BasePos{
+func (l *Lexer) capturePos() *common.BasePos {
+	return &common.BasePos{
 		Offset: l.idx,
 		Line:   l.line,
 		Column: l.col,
 	}
 }
 
-func (l *Lexer) finishPos(start BasePos, length int) SourcePos {
-	return SourcePos{
-		BasePos: BasePos{
+func (l *Lexer) finishPos(start common.BasePos, length int) common.SourcePos {
+	return common.SourcePos{
+		BasePos: common.BasePos{
 			Offset: start.Offset,
 			Line:   start.Line,
 			Column: start.Column,

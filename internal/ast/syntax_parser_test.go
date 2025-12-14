@@ -3,6 +3,7 @@ package ast
 import (
 	"testing"
 
+	"youpiteron.dev/white-monster-on-friday-night/internal/common"
 	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 )
 
@@ -11,8 +12,8 @@ func makeToken(lexeme string, kind lexer.TokenKind, subkind any, offset, line, c
 		Lexeme:  lexeme,
 		Kind:    kind,
 		Subkind: subkind,
-		Pos: &lexer.SourcePos{
-			BasePos: lexer.BasePos{
+		Pos: &common.SourcePos{
+			BasePos: common.BasePos{
 				Offset: offset,
 				Line:   line,
 				Column: col,
