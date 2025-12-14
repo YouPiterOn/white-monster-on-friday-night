@@ -49,20 +49,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	instructionsVisitor := compiler.NewInstructionsVisitor()
-	program.Visit(instructionsVisitor)
-	if len(instructionsVisitor.Errors()) > 0 {
-		fmt.Printf("failed to generate instructions from file %s\n", path)
-		for _, error := range instructionsVisitor.Errors() {
-			fmt.Printf("  %s at %v\n", error.Message, error.Pos)
-		}
-		os.Exit(1)
-	}
-	for _, functionProto := range instructionsVisitor.FunctionProtos() {
-		fmt.Printf("%s\n", functionProto.String())
-	}
+	compiler := compiler.NewCompiler()
+	functionProtos := compiler.Compile(program)
 
-	vm := vm.NewVM(instructionsVisitor.FunctionProtos())
+	vm := vm.NewVM(functionProtos)
 	retval := vm.Run()
 	fmt.Printf("retval: %d\n", retval.Int)
 }
