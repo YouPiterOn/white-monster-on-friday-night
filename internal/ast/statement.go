@@ -8,7 +8,9 @@ type Statement interface {
 }
 
 type Declaration struct {
-	Specifier  lexer.KeywordSubkind
+	IsMutable  bool
+	IsTyped    bool
+	TypeOf     lexer.TypeSubkind
 	Identifier *Identifier
 	Value      Expression
 	PosAt      *lexer.SourcePos

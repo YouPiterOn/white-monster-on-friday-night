@@ -36,6 +36,18 @@ func ValueTypeFromTypeSubkind(typeSubkind lexer.TypeSubkind) ValueType {
 	panic(fmt.Sprintf("COMPILER ERROR: invalid type subkind %v", typeSubkind))
 }
 
+func (t ValueType) DefaultValue() Value {
+	switch t {
+	case VAL_INT:
+		return NewIntValue(0)
+	case VAL_BOOL:
+		return NewBoolValue(false)
+	case VAL_NULL:
+		return NewNullValue()
+	}
+	panic(fmt.Sprintf("COMPILER ERROR: invalid type %v", t))
+}
+
 type Value struct {
 	TypeOf  ValueType
 	Int     int

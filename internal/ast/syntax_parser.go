@@ -257,20 +257,34 @@ func (p *Parser) ParseDeclaration() *Declaration {
 		p.addError(fmt.Sprintf("expected 'var' or 'const' but got %v(%v)", kw.Kind, kw.Subkind), kw.Pos)
 		return nil
 	}
+	isMutable := specifier == lexer.KeywordVar
 
 	idTok := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
 	if idTok == nil {
 		return nil
 	}
 
-	eq := p.eatExpected(lexer.Punctuator, lexer.Assign, "expected '='")
-	if eq == nil {
-		return nil
+	isTyped := false
+	var typeOf lexer.TypeSubkind
+	colonTok := p.peek(0)
+	if colonTok != nil && colonTok.Kind == lexer.Punctuator && colonTok.Subkind == lexer.Colon {
+		isTyped = true
+		p.eat()
+		typeTok := p.eatExpected(lexer.Type, nil, "expected type")
+		if typeTok == nil {
+			return nil
+		}
+		typeOf = typeTok.Subkind.(lexer.TypeSubkind)
 	}
 
-	value := p.ParseExpression()
-	if value == nil {
-		return nil
+	eqTok := p.peek(0)
+	var value Expression = nil
+	if eqTok != nil && eqTok.Kind == lexer.Punctuator && eqTok.Subkind == lexer.Assign {
+		p.eat()
+		value = p.ParseExpression()
+		if value == nil {
+			return nil
+		}
 	}
 
 	semicolon := p.eatExpected(lexer.Punctuator, lexer.StatementEnd, "expected ';'")
@@ -279,7 +293,9 @@ func (p *Parser) ParseDeclaration() *Declaration {
 	}
 
 	return &Declaration{
-		Specifier:  specifier,
+		IsMutable:  isMutable,
+		IsTyped:    isTyped,
+		TypeOf:     typeOf,
 		Identifier: &Identifier{Name: idTok.Lexeme, PosAt: idTok.Pos},
 		Value:      value,
 		PosAt:      kw.Pos,

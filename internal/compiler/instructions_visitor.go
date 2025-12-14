@@ -164,12 +164,37 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 		v.addError(fmt.Sprintf("variable %s already defined", n.Identifier.Name), n.Identifier.Pos())
 		return nil
 	}
-	result := n.Value.Visit(v)
-	resultVisitExpr := CastVisitExprResult(result)
+	if n.Value != nil {
+		result := n.Value.Visit(v)
+		resultVisitExpr := CastVisitExprResult(result)
 
-	slot := v.scope.DefineVariable(n.Identifier.Name, n.Specifier == lexer.KeywordVar, resultVisitExpr.TypeOf)
+		if n.IsTyped {
+			if resultVisitExpr.TypeOf != ValueTypeFromTypeSubkind(n.TypeOf) {
+				v.addError(fmt.Sprintf("variable %s is of type %s, but declaration is of type %s", n.Identifier.Name, resultVisitExpr.TypeOf, ValueTypeFromTypeSubkind(n.TypeOf)), n.Identifier.Pos())
+				return nil
+			}
+		}
 
-	v.addInstruction(InstrStoreVar(resultVisitExpr.Reg, slot))
+		slot := v.scope.DefineVariable(n.Identifier.Name, n.IsMutable, resultVisitExpr.TypeOf)
+
+		v.addInstruction(InstrStoreVar(resultVisitExpr.Reg, slot))
+	} else {
+		if !n.IsTyped {
+			v.addError(fmt.Sprintf("type is required for declaration of variable %s with default value", n.Identifier.Name), n.Identifier.Pos())
+			return nil
+		}
+		if !n.IsMutable {
+			v.addError(fmt.Sprintf("constant %s must have a value", n.Identifier.Name), n.Identifier.Pos())
+			return nil
+		}
+		defaultValue := ValueTypeFromTypeSubkind(n.TypeOf).DefaultValue()
+		constIndex := v.addConstant(defaultValue)
+		slot := v.scope.DefineVariable(n.Identifier.Name, n.IsMutable, ValueTypeFromTypeSubkind(n.TypeOf))
+
+		reg := v.nextReg()
+		v.addInstruction(InstrLoadConst(reg, constIndex))
+		v.addInstruction(InstrStoreVar(reg, slot))
+	}
 
 	return nil
 }

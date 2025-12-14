@@ -6,7 +6,7 @@ a = 60;
   const b = 123;
 }
 
-const b = 321;
+const b: int = 123;
 
 function addToA(other: int): int {
   return a + other;
