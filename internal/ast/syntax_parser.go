@@ -63,7 +63,10 @@ func (p *Parser) addError(msg string, pos *lexer.SourcePos) {
 
 func (p *Parser) ParseProgram() *Program {
 	statements := []Statement{}
-	pos := p.peek(0).Pos
+	t := p.peek(0)
+	if t == nil {
+		return &Program{Statements: statements, PosAt: nil}
+	}
 	for {
 		statement := p.ParseStatement()
 		if statement == nil {
@@ -71,7 +74,7 @@ func (p *Parser) ParseProgram() *Program {
 		}
 		statements = append(statements, statement)
 	}
-	return &Program{Statements: statements, PosAt: pos}
+	return &Program{Statements: statements, PosAt: t.Pos}
 }
 
 func (p *Parser) ParseStatement() Statement {
@@ -351,6 +354,13 @@ func (p *Parser) ParseCallExpr() Expression {
 		return nil
 	}
 	arguments := []Expression{}
+	t := p.peek(0)
+	if t == nil {
+		return nil
+	}
+	if t.Kind == lexer.Punctuator && t.Subkind == lexer.ParenClose {
+		return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
+	}
 	for {
 		argument := p.ParseExpression()
 		if argument == nil {
