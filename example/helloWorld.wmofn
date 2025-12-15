@@ -12,4 +12,8 @@ function addToA(other: int): int {
   return a + other;
 }
 
-return addToA(9);
+function isA(other: int): bool {
+  return a == other;
+}
+
+const is9A = isA(9);

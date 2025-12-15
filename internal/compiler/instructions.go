@@ -21,10 +21,20 @@ const (
 	LOAD_UPVAR
 	STORE_VAR
 	ASSIGN_UPVAR
-	ADD
-	SUB
-	MUL
-	DIV
+	ADD_INT
+	SUB_INT
+	MUL_INT
+	DIV_INT
+	EQ_INT
+	EQ_BOOL
+	NE_INT
+	NE_BOOL
+	GT_INT
+	GTE_INT
+	LT_INT
+	LTE_INT
+	AND_BOOL
+	OR_BOOL
 	CLOSURE
 	CALL
 	RETURN
@@ -37,10 +47,20 @@ func (o OpCode) String() string {
 		"LOAD_UPVAR",
 		"STORE_VAR",
 		"ASSIGN_UPVAR",
-		"ADD",
-		"SUB",
-		"MUL",
-		"DIV",
+		"ADD_INT",
+		"SUB_INT",
+		"MUL_INT",
+		"DIV_INT",
+		"EQ_INT",
+		"EQ_BOOL",
+		"NE_INT",
+		"NE_BOOL",
+		"GT_INT",
+		"GTE_INT",
+		"LT_INT",
+		"LTE_INT",
+		"AND_BOOL",
+		"OR_BOOL",
 		"CLOSURE",
 		"CALL",
 		"RETURN",
@@ -82,30 +102,107 @@ func InstrAssignUpvar(reg int, slot int) Instruction {
 	}
 }
 
-func InstrAdd(regResult int, regLeft int, regRight int) Instruction {
+func InstrBinary(op OpCode, regResult int, regLeft int, regRight int) Instruction {
 	return Instruction{
-		OpCode: ADD,
+		OpCode: op,
 		Args:   []int{regResult, regLeft, regRight},
 	}
 }
 
-func InstrSub(regResult int, regLeft int, regRight int) Instruction {
+func InstrAddInt(regResult int, regLeft int, regRight int) Instruction {
 	return Instruction{
-		OpCode: SUB,
+		OpCode: ADD_INT,
 		Args:   []int{regResult, regLeft, regRight},
 	}
 }
 
-func InstrMul(regResult int, regLeft int, regRight int) Instruction {
+func InstrSubInt(regResult int, regLeft int, regRight int) Instruction {
 	return Instruction{
-		OpCode: MUL,
+		OpCode: SUB_INT,
 		Args:   []int{regResult, regLeft, regRight},
 	}
 }
 
-func InstrDiv(regResult int, regLeft int, regRight int) Instruction {
+func InstrMulInt(regResult int, regLeft int, regRight int) Instruction {
 	return Instruction{
-		OpCode: DIV,
+		OpCode: MUL_INT,
+		Args:   []int{regResult, regLeft, regRight},
+	}
+}
+
+func InstrDivInt(regResult int, regLeft int, regRight int) Instruction {
+	return Instruction{
+		OpCode: DIV_INT,
+		Args:   []int{regResult, regLeft, regRight},
+	}
+}
+
+func InstrEqualInt(regResult int, regLeft int, regRight int) Instruction {
+	return Instruction{
+		OpCode: EQ_INT,
+		Args:   []int{regResult, regLeft, regRight},
+	}
+}
+
+func InstrEqualBool(regResult int, regLeft int, regRight int) Instruction {
+	return Instruction{
+		OpCode: EQ_BOOL,
+		Args:   []int{regResult, regLeft, regRight},
+	}
+}
+
+func InstrNotEqualInt(regResult int, regLeft int, regRight int) Instruction {
+	return Instruction{
+		OpCode: NE_INT,
+		Args:   []int{regResult, regLeft, regRight},
+	}
+}
+
+func InstrNotEqualBool(regResult int, regLeft int, regRight int) Instruction {
+	return Instruction{
+		OpCode: NE_BOOL,
+		Args:   []int{regResult, regLeft, regRight},
+	}
+}
+
+func InstrGreaterInt(regResult int, regLeft int, regRight int) Instruction {
+	return Instruction{
+		OpCode: GT_INT,
+		Args:   []int{regResult, regLeft, regRight},
+	}
+}
+
+func InstrGreaterEqualInt(regResult int, regLeft int, regRight int) Instruction {
+	return Instruction{
+		OpCode: GTE_INT,
+		Args:   []int{regResult, regLeft, regRight},
+	}
+}
+
+func InstrLessInt(regResult int, regLeft int, regRight int) Instruction {
+	return Instruction{
+		OpCode: LT_INT,
+		Args:   []int{regResult, regLeft, regRight},
+	}
+}
+
+func InstrLessEqualInt(regResult int, regLeft int, regRight int) Instruction {
+	return Instruction{
+		OpCode: LTE_INT,
+		Args:   []int{regResult, regLeft, regRight},
+	}
+}
+
+func InstrAndBool(regResult int, regLeft int, regRight int) Instruction {
+	return Instruction{
+		OpCode: AND_BOOL,
+		Args:   []int{regResult, regLeft, regRight},
+	}
+}
+
+func InstrOrBool(regResult int, regLeft int, regRight int) Instruction {
+	return Instruction{
+		OpCode: OR_BOOL,
 		Args:   []int{regResult, regLeft, regRight},
 	}
 }

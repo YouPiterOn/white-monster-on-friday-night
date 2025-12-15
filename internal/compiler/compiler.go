@@ -24,5 +24,8 @@ func (c *Compiler) Compile(program *ast.Program) []FunctionProto {
 		}
 		os.Exit(1)
 	}
+	for _, functionProto := range c.instructionsVisitor.FunctionProtos() {
+		fmt.Printf("function proto: %s\n", functionProto.String())
+	}
 	return c.instructionsVisitor.FunctionProtos()
 }

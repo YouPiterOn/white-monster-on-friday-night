@@ -107,6 +107,14 @@ const (
 	OperatorMinus
 	OperatorStar
 	OperatorSlash
+	OperatorEqual
+	OperatorNotEqual
+	OperatorGreater
+	OperatorGreaterEqual
+	OperatorLess
+	OperatorLessEqual
+	OperatorAnd
+	OperatorOr
 )
 
 func (k OperatorSubkind) String() string {
@@ -115,6 +123,14 @@ func (k OperatorSubkind) String() string {
 		"-",
 		"*",
 		"/",
+		"==",
+		"!=",
+		">",
+		">=",
+		"<",
+		"<=",
+		"&&",
+		"||",
 	}[k]
 }
 

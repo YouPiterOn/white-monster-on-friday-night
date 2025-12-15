@@ -13,7 +13,7 @@ func NewVM(functionProtos []compiler.FunctionProto) *VM {
 	return &VM{frames: make([]Frame, 0), functionProtos: functionProtos}
 }
 
-func (v *VM) Run() compiler.Value {
+func (v *VM) Run() int {
 	if len(v.functionProtos) == 0 {
 		panic("VM ERROR: no functions to run")
 	}
@@ -22,7 +22,10 @@ func (v *VM) Run() compiler.Value {
 	frame := NewFrame(closure)
 	v.frames = append(v.frames, *frame)
 	retval := v.runFunction(functionProto)
-	return *retval
+	if retval == nil {
+		return 0
+	}
+	return retval.Int
 }
 
 func (v *VM) currentFrame() *Frame {
@@ -46,14 +49,34 @@ func (v *VM) runFunction(functionProto *compiler.FunctionProto) *compiler.Value 
 			v.opStoreVar(instruction.Args)
 		case compiler.ASSIGN_UPVAR:
 			v.opAssignUpvar(instruction.Args)
-		case compiler.ADD:
-			v.opAdd(instruction.Args)
-		case compiler.SUB:
-			v.opSub(instruction.Args)
-		case compiler.MUL:
-			v.opMul(instruction.Args)
-		case compiler.DIV:
-			v.opDiv(instruction.Args)
+		case compiler.ADD_INT:
+			v.opAddInt(instruction.Args)
+		case compiler.SUB_INT:
+			v.opSubInt(instruction.Args)
+		case compiler.MUL_INT:
+			v.opMulInt(instruction.Args)
+		case compiler.DIV_INT:
+			v.opDivInt(instruction.Args)
+		case compiler.EQ_INT:
+			v.opEqInt(instruction.Args)
+		case compiler.EQ_BOOL:
+			v.opEqBool(instruction.Args)
+		case compiler.NE_INT:
+			v.opNeInt(instruction.Args)
+		case compiler.NE_BOOL:
+			v.opNeBool(instruction.Args)
+		case compiler.GT_INT:
+			v.opGtInt(instruction.Args)
+		case compiler.GTE_INT:
+			v.opGteInt(instruction.Args)
+		case compiler.LT_INT:
+			v.opLtInt(instruction.Args)
+		case compiler.LTE_INT:
+			v.opLteInt(instruction.Args)
+		case compiler.AND_BOOL:
+			v.opAndBool(instruction.Args)
+		case compiler.OR_BOOL:
+			v.opOrBool(instruction.Args)
 		case compiler.CLOSURE:
 			v.opClosure(instruction.Args)
 		case compiler.CALL:
@@ -91,43 +114,101 @@ func (v *VM) opAssignUpvar(args []int) {
 	v.currentFrame().SetUpvar(args[1], *value)
 }
 
-func (v *VM) opAdd(args []int) {
+func (v *VM) opAddInt(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.TypeOf != compiler.VAL_INT || right.TypeOf != compiler.VAL_INT {
-		panic("VM ERROR: invalid operand type for addition")
-	}
 	result := compiler.Value{TypeOf: compiler.VAL_INT, Int: left.Int + right.Int}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
-func (v *VM) opSub(args []int) {
+func (v *VM) opSubInt(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.TypeOf != compiler.VAL_INT || right.TypeOf != compiler.VAL_INT {
-		panic("VM ERROR: invalid operand type for subtraction")
-	}
 	result := compiler.Value{TypeOf: compiler.VAL_INT, Int: left.Int - right.Int}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
-func (v *VM) opMul(args []int) {
+func (v *VM) opMulInt(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.TypeOf != compiler.VAL_INT || right.TypeOf != compiler.VAL_INT {
-		panic("VM ERROR: invalid operand type for multiplication")
-	}
 	result := compiler.Value{TypeOf: compiler.VAL_INT, Int: left.Int * right.Int}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
-func (v *VM) opDiv(args []int) {
+func (v *VM) opDivInt(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
-	if left.TypeOf != compiler.VAL_INT || right.TypeOf != compiler.VAL_INT {
-		panic("VM ERROR: invalid operand type for division")
-	}
 	result := compiler.Value{TypeOf: compiler.VAL_INT, Int: left.Int / right.Int}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opEqInt(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Int == right.Int}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opEqBool(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Bool == right.Bool}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opNeInt(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Int != right.Int}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opNeBool(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Bool != right.Bool}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opGtInt(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Int > right.Int}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opGteInt(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Int >= right.Int}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opLtInt(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Int < right.Int}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opLteInt(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Int <= right.Int}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opAndBool(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Bool && right.Bool}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opOrBool(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Bool || right.Bool}
 	v.currentFrame().SetRegister(args[0], result)
 }
 

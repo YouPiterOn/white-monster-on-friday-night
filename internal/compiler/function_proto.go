@@ -12,15 +12,14 @@ func (u *UpvarDesc) String() string {
 }
 
 type FunctionBuilder struct {
-	Name         string
 	Params       []ValueType
 	ReturnType   ValueType
 	Instructions []Instruction
 	Constants    []Value
 }
 
-func NewFunctionBuilder(name string, returnType ValueType) *FunctionBuilder {
-	return &FunctionBuilder{Name: name, Params: []ValueType{}, ReturnType: returnType, Instructions: []Instruction{}, Constants: []Value{}}
+func NewFunctionBuilder(returnType ValueType) *FunctionBuilder {
+	return &FunctionBuilder{Params: []ValueType{}, ReturnType: returnType, Instructions: []Instruction{}, Constants: []Value{}}
 }
 
 func (f *FunctionBuilder) AddInstruction(instruction Instruction) {
@@ -42,11 +41,10 @@ func (f *FunctionBuilder) Build(scope *Scope) FunctionProto {
 	for _, upvar := range scope.upvarsMap {
 		upvars = append(upvars, UpvarDesc{SlotInParent: upvar.SlotInParent, IsFromParent: upvar.IsFromParent})
 	}
-	return FunctionProto{Name: f.Name, NumLocals: numLocals, Params: f.Params, ReturnType: f.ReturnType, Instructions: f.Instructions, Upvars: upvars, Constants: f.Constants}
+	return FunctionProto{NumLocals: numLocals, Params: f.Params, ReturnType: f.ReturnType, Instructions: f.Instructions, Upvars: upvars, Constants: f.Constants}
 }
 
 type FunctionProto struct {
-	Name         string
 	NumLocals    int
 	Params       []ValueType
 	ReturnType   ValueType
@@ -64,5 +62,5 @@ func (f *FunctionProto) String() string {
 	for _, upvar := range f.Upvars {
 		upvarsString += upvar.String() + "\n"
 	}
-	return fmt.Sprintf("%s:\nInstructions:\n%s\nUpvars:\n%s", f.Name, instructionsString, upvarsString)
+	return fmt.Sprintf("Instructions:\n%s\nUpvars:\n%s", instructionsString, upvarsString)
 }

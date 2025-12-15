@@ -54,5 +54,5 @@ func main() {
 
 	vm := vm.NewVM(functionProtos)
 	retval := vm.Run()
-	fmt.Printf("retval: %d\n", retval.Int)
+	fmt.Printf("retval: %d\n", retval)
 }

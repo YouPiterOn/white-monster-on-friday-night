@@ -14,6 +14,7 @@ const (
 	StateInitial LexerState = iota
 	StateIdentifier
 	StateNumber
+	StateOperator
 )
 
 type LexResult struct {
@@ -75,19 +76,6 @@ func (l *Lexer) Lex(input string) LexResult {
 					Lexeme:  ",",
 					Kind:    Punctuator,
 					Subkind: Comma,
-					Pos:     &pos,
-				})
-				continue
-			}
-
-			// punctuator '='
-			if ch == '=' {
-				pos := l.posSpan(1)
-				l.next()
-				tokens = append(tokens, Token{
-					Lexeme:  "=",
-					Kind:    Punctuator,
-					Subkind: Assign,
 					Pos:     &pos,
 				})
 				continue
@@ -159,15 +147,11 @@ func (l *Lexer) Lex(input string) LexResult {
 			}
 
 			// operator
-			if op, ok := operatorSubkind(ch); ok {
-				pos := l.posSpan(1)
+			if isOperatorStart(ch) {
+				l.state = StateOperator
+				l.startPos = l.capturePos()
+				l.buf = string(ch)
 				l.next()
-				tokens = append(tokens, Token{
-					Lexeme:  string(ch),
-					Kind:    Operator,
-					Subkind: op,
-					Pos:     &pos,
-				})
 				continue
 			}
 
@@ -182,6 +166,8 @@ func (l *Lexer) Lex(input string) LexResult {
 			if isIdentStart(ch) {
 				l.state = StateIdentifier
 				l.startPos = l.capturePos()
+				l.buf = string(ch)
+				l.next()
 				continue
 			}
 
@@ -224,6 +210,21 @@ func (l *Lexer) Lex(input string) LexResult {
 				errors = append(errors, *err)
 			}
 
+			l.state = StateInitial
+			l.buf = ""
+			l.startPos = nil
+			continue
+
+		case StateOperator:
+			if !l.eof() && isOperatorContinue(l.peek()) {
+				l.buf += string(l.next())
+				continue
+			}
+			if tok, err := l.flushOperator(); tok != nil {
+				tokens = append(tokens, *tok)
+			} else if err != nil {
+				errors = append(errors, *err)
+			}
 			l.state = StateInitial
 			l.buf = ""
 			l.startPos = nil
@@ -340,6 +341,35 @@ func (l *Lexer) flushIdentifier() (*Token, *common.Error) {
 	}, nil
 }
 
+func (l *Lexer) flushOperator() (*Token, *common.Error) {
+	if l.startPos == nil {
+		return nil, nil
+	}
+
+	lex := l.buf
+	pos := l.finishPos(*l.startPos, len(lex))
+
+	// punctuator '='
+	if lex == "=" {
+		return &Token{
+			Lexeme:  lex,
+			Kind:    Punctuator,
+			Subkind: Assign,
+			Pos:     &pos,
+		}, nil
+	}
+
+	if op, ok := operatorSubkind(lex); ok {
+		return &Token{
+			Lexeme:  lex,
+			Kind:    Operator,
+			Subkind: op,
+			Pos:     &pos,
+		}, nil
+	}
+	return nil, &common.Error{Message: fmt.Sprintf("invalid operator: %s", lex), Pos: &pos}
+}
+
 func (l *Lexer) flushNumber() (*Token, *common.Error) {
 	if l.startPos == nil {
 		return nil, nil
@@ -380,16 +410,40 @@ func isIdentContinue(ch byte) bool {
 	return isLetter(ch) || isDigit(ch)
 }
 
-func operatorSubkind(ch byte) (OperatorSubkind, bool) {
-	switch ch {
-	case '+':
+func isOperatorStart(ch byte) bool {
+	return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '=' || ch == '!' || ch == '>' || ch == '<' || ch == '&' || ch == '|'
+}
+
+func isOperatorContinue(ch byte) bool {
+	return ch == '=' || ch == '&' || ch == '|'
+}
+
+func operatorSubkind(lex string) (OperatorSubkind, bool) {
+	switch lex {
+	case "+":
 		return OperatorPlus, true
-	case '-':
+	case "-":
 		return OperatorMinus, true
-	case '*':
+	case "*":
 		return OperatorStar, true
-	case '/':
+	case "/":
 		return OperatorSlash, true
+	case "==":
+		return OperatorEqual, true
+	case "!=":
+		return OperatorNotEqual, true
+	case ">":
+		return OperatorGreater, true
+	case ">=":
+		return OperatorGreaterEqual, true
+	case "<":
+		return OperatorLess, true
+	case "<=":
+		return OperatorLessEqual, true
+	case "&&":
+		return OperatorAnd, true
+	case "||":
+		return OperatorOr, true
 	default:
 		return 0, false
 	}

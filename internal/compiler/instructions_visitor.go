@@ -5,7 +5,6 @@ import (
 
 	"youpiteron.dev/white-monster-on-friday-night/internal/ast"
 	"youpiteron.dev/white-monster-on-friday-night/internal/common"
-	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 )
 
 type VisitExprResult struct {
@@ -14,12 +13,15 @@ type VisitExprResult struct {
 	Callable *Callable
 }
 
-func CastVisitExprResult(result any) VisitExprResult {
-	resultVisitExpr, ok := result.(VisitExprResult)
+func CastVisitExprResult(result any) (*VisitExprResult, bool) {
+	if result == nil {
+		return nil, false
+	}
+	resultVisitExpr, ok := result.(*VisitExprResult)
 	if !ok {
 		panic(fmt.Sprintf("COMPILER ERROR: result %v is not a VisitExprResult", resultVisitExpr))
 	}
-	return resultVisitExpr
+	return resultVisitExpr, true
 }
 
 type InstructionsVisitor struct {
@@ -101,13 +103,13 @@ func (v *InstructionsVisitor) currentFunctionBuilder() *FunctionBuilder {
 	return &v.functionBuilders[len(v.functionBuilders)-1]
 }
 
-func (v *InstructionsVisitor) enterFunctionScope(name string, returnType ValueType) {
+func (v *InstructionsVisitor) enterFunctionScope(returnType ValueType) {
 	if v.scope == nil {
 		v.scope = NewScope(true)
 	} else {
 		v.scope = v.scope.NewChildScope(true)
 	}
-	v.addFunctionBuilder(*NewFunctionBuilder(name, returnType))
+	v.addFunctionBuilder(*NewFunctionBuilder(returnType))
 }
 
 func (v *InstructionsVisitor) exitFunctionScope() int {
@@ -145,7 +147,7 @@ func (v *InstructionsVisitor) FunctionProtos() []FunctionProto {
 // ---------- Visitor Implementations ----------
 
 func (v *InstructionsVisitor) VisitProgram(n *ast.Program) any {
-	v.enterFunctionScope("main", VAL_INT)
+	v.enterFunctionScope(VAL_INT)
 	for _, statement := range n.Statements {
 		statement.Visit(v)
 		v.resetReg()
@@ -162,7 +164,10 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 	}
 	if n.Value != nil {
 		result := n.Value.Visit(v)
-		resultVisitExpr := CastVisitExprResult(result)
+		resultVisitExpr, ok := CastVisitExprResult(result)
+		if !ok {
+			return nil
+		}
 
 		if n.IsTyped {
 			if resultVisitExpr.TypeOf != ValueTypeFromTypeSubkind(n.TypeOf) {
@@ -202,7 +207,10 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 		return nil
 	}
 	result := n.Value.Visit(v)
-	resultVisitExpr := CastVisitExprResult(result)
+	resultVisitExpr, ok := CastVisitExprResult(result)
+	if !ok {
+		return nil
+	}
 
 	if localVar != nil {
 		if !localVar.Mutable {
@@ -231,7 +239,10 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 
 func (v *InstructionsVisitor) VisitReturn(n *ast.Return) any {
 	result := n.Value.Visit(v)
-	resultVisitExpr := CastVisitExprResult(result)
+	resultVisitExpr, ok := CastVisitExprResult(result)
+	if !ok {
+		return nil
+	}
 	builder := v.currentFunctionBuilder()
 	if resultVisitExpr.TypeOf != builder.ReturnType {
 		v.addError(fmt.Sprintf("return value must be of type %s, but got %s", builder.ReturnType, resultVisitExpr.TypeOf), n.Value.Pos())
@@ -245,28 +256,28 @@ func (v *InstructionsVisitor) VisitIntLiteral(n *ast.IntLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.addConstant(NewIntValue(n.Value))
 	v.addInstruction(InstrLoadConst(reg, constIndex))
-	return VisitExprResult{Reg: reg, TypeOf: VAL_INT}
+	return &VisitExprResult{Reg: reg, TypeOf: VAL_INT}
 }
 
 func (v *InstructionsVisitor) VisitBoolLiteral(n *ast.BoolLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.addConstant(NewBoolValue(n.Value))
 	v.addInstruction(InstrLoadConst(reg, constIndex))
-	return VisitExprResult{Reg: reg, TypeOf: VAL_BOOL}
+	return &VisitExprResult{Reg: reg, TypeOf: VAL_BOOL}
 }
 
 func (v *InstructionsVisitor) VisitNullLiteral(n *ast.NullLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.addConstant(NewNullValue())
 	v.addInstruction(InstrLoadConst(reg, constIndex))
-	return VisitExprResult{Reg: reg, TypeOf: VAL_NULL}
+	return &VisitExprResult{Reg: reg, TypeOf: VAL_NULL}
 }
 
 func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 	localVar, upvar, ok := v.scope.FindVariable(n.Name)
 	if !ok {
 		v.addError(fmt.Sprintf("variable %s not found", n.Name), n.Pos())
-		return VisitExprResult{}
+		return nil
 	}
 	reg := v.nextReg()
 	var typeOf ValueType
@@ -280,30 +291,29 @@ func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 		typeOf = upvar.TypeOf
 		callable = upvar.Callable
 	}
-	return VisitExprResult{Reg: reg, TypeOf: typeOf, Callable: callable}
+	return &VisitExprResult{Reg: reg, TypeOf: typeOf, Callable: callable}
 }
 
 func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
 	leftResult := n.Left.Visit(v)
-	leftVisitExpr := CastVisitExprResult(leftResult)
+	leftVisitExpr, ok := CastVisitExprResult(leftResult)
+	if !ok {
+		return nil
+	}
 	rightResult := n.Right.Visit(v)
-	rightVisitExpr := CastVisitExprResult(rightResult)
-	if leftVisitExpr.TypeOf != rightVisitExpr.TypeOf {
-		v.addError(fmt.Sprintf("left and right expressions must be of the same type, but got %s and %s", leftVisitExpr.TypeOf, rightVisitExpr.TypeOf), n.Pos())
-		return VisitExprResult{}
+	rightVisitExpr, ok := CastVisitExprResult(rightResult)
+	if !ok {
+		return nil
+	}
+
+	opInfo, ok := ResolveBinaryOp(n.Operator, leftVisitExpr.TypeOf, rightVisitExpr.TypeOf)
+	if !ok {
+		v.addError(fmt.Sprintf("binary operator %s is not supported for types %s and %s", n.Operator, leftVisitExpr.TypeOf, rightVisitExpr.TypeOf), n.Pos())
+		return nil
 	}
 	reg := v.nextReg()
-	switch n.Operator {
-	case lexer.OperatorPlus:
-		v.addInstruction(InstrAdd(reg, leftVisitExpr.Reg, rightVisitExpr.Reg))
-	case lexer.OperatorMinus:
-		v.addInstruction(InstrSub(reg, leftVisitExpr.Reg, rightVisitExpr.Reg))
-	case lexer.OperatorStar:
-		v.addInstruction(InstrMul(reg, leftVisitExpr.Reg, rightVisitExpr.Reg))
-	case lexer.OperatorSlash:
-		v.addInstruction(InstrDiv(reg, leftVisitExpr.Reg, rightVisitExpr.Reg))
-	}
-	return VisitExprResult{Reg: reg, TypeOf: leftVisitExpr.TypeOf}
+	v.addInstruction(InstrBinary(opInfo.OpCode, reg, leftVisitExpr.Reg, rightVisitExpr.Reg))
+	return &VisitExprResult{Reg: reg, TypeOf: opInfo.ResultType}
 }
 
 func (v *InstructionsVisitor) VisitParam(n *ast.Param) any {
@@ -316,10 +326,10 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 	_, ok := v.scope.FindLocalVariable(n.Name)
 	if ok {
 		v.addError(fmt.Sprintf("variable %s already defined", n.Name), n.Pos())
-		return VisitExprResult{}
+		return nil
 	}
 
-	v.enterFunctionScope(n.Name, ValueTypeFromTypeSubkind(n.ReturnType))
+	v.enterFunctionScope(ValueTypeFromTypeSubkind(n.ReturnType))
 
 	for _, param := range n.Params {
 		param.Visit(v)
@@ -336,7 +346,7 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 	reg := v.nextReg()
 	v.addInstruction(InstrClosure(reg, functionSlot))
 	v.addInstruction(InstrStoreVar(reg, slot))
-	return VisitExprResult{Reg: reg, TypeOf: VAL_CLOSURE}
+	return &VisitExprResult{Reg: reg, TypeOf: VAL_CLOSURE}
 }
 
 func (v *InstructionsVisitor) VisitBlock(n *ast.Block) any {
@@ -350,14 +360,17 @@ func (v *InstructionsVisitor) VisitBlock(n *ast.Block) any {
 
 func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 	result := n.Identifier.Visit(v)
-	resultVisitExpr := CastVisitExprResult(result)
+	resultVisitExpr, ok := CastVisitExprResult(result)
+	if !ok {
+		return nil
+	}
 	if resultVisitExpr.TypeOf != VAL_CLOSURE {
 		v.addError(fmt.Sprintf("function call must be of type closure, but got %s", resultVisitExpr.TypeOf), n.Identifier.Pos())
-		return VisitExprResult{}
+		return nil
 	}
 	if resultVisitExpr.Callable == nil {
 		v.addError(fmt.Sprintf("function %s is not callable", n.Identifier.Name), n.Identifier.Pos())
-		return VisitExprResult{}
+		return nil
 	}
 
 	args := []int{}
@@ -372,7 +385,10 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 		paramType := resultVisitExpr.Callable.CallArgs[i]
 
 		argumentResult := argument.Visit(v)
-		argumentVisitExpr := CastVisitExprResult(argumentResult)
+		argumentVisitExpr, ok := CastVisitExprResult(argumentResult)
+		if !ok {
+			return nil
+		}
 
 		if argumentVisitExpr.TypeOf != paramType {
 			v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", i, paramType, argumentVisitExpr.TypeOf), argument.Pos())
@@ -383,10 +399,10 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 	}
 
 	if isError {
-		return VisitExprResult{}
+		return nil
 	}
 
 	resultReg := v.nextReg()
 	v.addInstruction(InstrCall(resultReg, resultVisitExpr.Reg, args))
-	return VisitExprResult{Reg: resultReg, TypeOf: resultVisitExpr.Callable.ReturnType}
+	return &VisitExprResult{Reg: resultReg, TypeOf: resultVisitExpr.Callable.ReturnType}
 }
