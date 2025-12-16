@@ -103,15 +103,8 @@ func (p *Parser) ParseStatement() Statement {
 		return p.ParseIf()
 	}
 
-	expression := p.ParseExpression()
-	if expression == nil {
-		return nil
-	}
-	semicolon := p.eatExpected(lexer.Punctuator, lexer.StatementEnd, "expected ';'")
-	if semicolon == nil {
-		return nil
-	}
-	return &Return{Value: expression, PosAt: semicolon.Pos}
+	p.addError(fmt.Sprintf("expected statement but got %v(%v)", t.Kind, t.Subkind), t.Pos)
+	return nil
 }
 
 func (p *Parser) ParseFunction() Statement {
