@@ -33,11 +33,12 @@ func (v *VM) currentFrame() *Frame {
 }
 
 func (v *VM) runFunction(functionProto *compiler.FunctionProto) *compiler.Value {
-	var retval *compiler.Value = nil
-	for _, instruction := range functionProto.Instructions {
-		if retval != nil {
+	for {
+		frame := v.currentFrame()
+		if frame.ip >= len(functionProto.Instructions) || frame.retval != nil {
 			break
 		}
+		instruction := functionProto.Instructions[frame.ip]
 		switch instruction.OpCode {
 		case compiler.LOAD_CONST:
 			v.opLoadConst(instruction.Args)
@@ -82,9 +83,15 @@ func (v *VM) runFunction(functionProto *compiler.FunctionProto) *compiler.Value 
 		case compiler.CALL:
 			v.opCall(instruction.Args)
 		case compiler.RETURN:
-			retval = v.opReturn(instruction.Args)
+			v.opReturn(instruction.Args)
+		case compiler.JUMP_IF_FALSE:
+			v.opJumpIfFalse(instruction.Args)
+		case compiler.JUMP:
+			v.opJump(instruction.Args)
 		}
+		frame.AdvanceIp()
 	}
+	retval := v.currentFrame().retval
 	v.frames = v.frames[:len(v.frames)-1]
 	return retval
 }
@@ -242,6 +249,18 @@ func (v *VM) opCall(args []int) {
 	v.currentFrame().SetRegister(args[0], *retval)
 }
 
-func (v *VM) opReturn(args []int) *compiler.Value {
-	return v.currentFrame().GetRegister(args[0])
+func (v *VM) opReturn(args []int) {
+	val := v.currentFrame().GetRegister(args[0])
+	v.currentFrame().SetRetval(val)
+}
+
+func (v *VM) opJumpIfFalse(args []int) {
+	condition := v.currentFrame().GetRegister(args[0])
+	if !condition.Bool {
+		v.currentFrame().SetIp(args[1])
+	}
+}
+
+func (v *VM) opJump(args []int) {
+	v.currentFrame().SetIp(args[0])
 }

@@ -35,6 +35,8 @@ const (
 	KeywordVar
 	KeywordReturn
 	KeywordFunction
+	KeywordIf
+	KeywordElse
 )
 
 func (k KeywordSubkind) String() string {
@@ -43,6 +45,8 @@ func (k KeywordSubkind) String() string {
 		"var",
 		"return",
 		"function",
+		"if",
+		"else",
 	}[k]
 }
 

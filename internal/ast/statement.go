@@ -47,3 +47,16 @@ func (r *Return) statementNode()         {}
 func (r *Return) Visit(v Visitor[any]) any {
 	return v.VisitReturn(r)
 }
+
+type If struct {
+	Condition Expression
+	Body      []Statement
+	ElseBody  []Statement
+	PosAt     *common.SourcePos
+}
+
+func (i *If) Pos() *common.SourcePos { return i.PosAt }
+func (i *If) statementNode()         {}
+func (i *If) Visit(v Visitor[any]) any {
+	return v.VisitIf(i)
+}

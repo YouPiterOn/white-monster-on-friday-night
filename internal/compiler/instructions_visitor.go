@@ -61,11 +61,20 @@ func (v *InstructionsVisitor) resetReg() int {
 	return reg
 }
 
-func (v *InstructionsVisitor) addInstruction(instruction Instruction) {
-	if len(v.functionBuilders) == 0 {
-		panic("COMPILER ERROR: no function builder found")
-	}
-	v.functionBuilders[len(v.functionBuilders)-1].AddInstruction(instruction)
+func (v *InstructionsVisitor) addInstruction(instruction Instruction) int {
+	functionBuilder := v.currentFunctionBuilder()
+	functionBuilder.AddInstruction(instruction)
+	return len(functionBuilder.Instructions) - 1
+}
+
+func (v *InstructionsVisitor) setInstruction(index int, instruction Instruction) {
+	functionBuilder := v.currentFunctionBuilder()
+	functionBuilder.Instructions[index] = instruction
+}
+
+func (v *InstructionsVisitor) instructionsLength() int {
+	functionBuilder := v.currentFunctionBuilder()
+	return len(functionBuilder.Instructions)
 }
 
 func (v *InstructionsVisitor) addConstant(value Value) int {
@@ -405,4 +414,38 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 	resultReg := v.nextReg()
 	v.addInstruction(InstrCall(resultReg, resultVisitExpr.Reg, args))
 	return &VisitExprResult{Reg: resultReg, TypeOf: resultVisitExpr.Callable.ReturnType}
+}
+
+func (v *InstructionsVisitor) VisitIf(n *ast.If) any {
+	conditionResult := n.Condition.Visit(v)
+	conditionVisitExpr, ok := CastVisitExprResult(conditionResult)
+	if !ok {
+		return nil
+	}
+	if conditionVisitExpr.TypeOf != VAL_BOOL {
+		v.addError(fmt.Sprintf("condition must be of type bool, but got %s", conditionVisitExpr.TypeOf), n.Condition.Pos())
+		return nil
+	}
+	reg := conditionVisitExpr.Reg
+	jumpIfFalseIndex := v.addInstruction(InstrJumpIfFalse(reg, -1))
+
+	for _, statement := range n.Body {
+		statement.Visit(v)
+	}
+	elseBodyIndex := -1
+	if len(n.ElseBody) > 0 {
+		elseBodyIndex = v.addInstruction(InstrJump(-1))
+	}
+	endIfTarget := v.instructionsLength() - 1
+	v.setInstruction(jumpIfFalseIndex, InstrJumpIfFalse(reg, endIfTarget))
+
+	for _, statement := range n.ElseBody {
+		statement.Visit(v)
+	}
+
+	if elseBodyIndex != -1 {
+		endElseTarget := v.instructionsLength() - 1
+		v.setInstruction(elseBodyIndex, InstrJump(endElseTarget))
+	}
+	return nil
 }

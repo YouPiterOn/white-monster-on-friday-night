@@ -6,10 +6,12 @@ type Frame struct {
 	closure   *compiler.Closure
 	locals    []compiler.Value
 	registers []compiler.Value
+	ip        int
+	retval    *compiler.Value
 }
 
 func NewFrame(closure *compiler.Closure) *Frame {
-	return &Frame{closure: closure, locals: make([]compiler.Value, closure.Proto.NumLocals), registers: make([]compiler.Value, 0)}
+	return &Frame{closure: closure, locals: make([]compiler.Value, closure.Proto.NumLocals), registers: make([]compiler.Value, 0), ip: 0, retval: nil}
 }
 
 func (f *Frame) GetLocal(slot int) *compiler.Value {
@@ -51,4 +53,16 @@ func (f *Frame) SetUpvar(slot int, value compiler.Value) {
 
 func (f *Frame) GetConstant(index int) compiler.Value {
 	return f.closure.Proto.Constants[index]
+}
+
+func (f *Frame) AdvanceIp() {
+	f.ip++
+}
+
+func (f *Frame) SetIp(ip int) {
+	f.ip = ip
+}
+
+func (f *Frame) SetRetval(retval *compiler.Value) {
+	f.retval = retval
 }

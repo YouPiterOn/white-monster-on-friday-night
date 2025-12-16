@@ -99,6 +99,10 @@ func (p *Parser) ParseStatement() Statement {
 		return p.ParseAssignment()
 	}
 
+	if t.Kind == lexer.Keyword && t.Subkind == lexer.KeywordIf {
+		return p.ParseIf()
+	}
+
 	expression := p.ParseExpression()
 	if expression == nil {
 		return nil
@@ -327,6 +331,36 @@ func (p *Parser) ParseAssignment() *Assignment {
 		Value:      value,
 		PosAt:      idTok.Pos,
 	}
+}
+
+func (p *Parser) ParseIf() *If {
+	kw := p.eatExpected(lexer.Keyword, lexer.KeywordIf, "expected 'if'")
+	if kw == nil {
+		return nil
+	}
+	lparen := p.eatExpected(lexer.Punctuator, lexer.ParenOpen, "expected '('")
+	if lparen == nil {
+		return nil
+	}
+	condition := p.ParseExpression()
+	if condition == nil {
+		return nil
+	}
+	rparen := p.eatExpected(lexer.Punctuator, lexer.ParenClose, "expected ')'")
+	if rparen == nil {
+		return nil
+	}
+	body := p.ParseBody()
+	if body == nil {
+		return nil
+	}
+	elseBody := []Statement{}
+	elseKw := p.peek(0)
+	if elseKw != nil && elseKw.Kind == lexer.Keyword && elseKw.Subkind == lexer.KeywordElse {
+		p.eat()
+		elseBody = p.ParseBody()
+	}
+	return &If{Condition: condition, Body: body, ElseBody: elseBody, PosAt: kw.Pos}
 }
 
 func (p *Parser) ParseExpression() Expression {

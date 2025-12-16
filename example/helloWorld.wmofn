@@ -17,3 +17,9 @@ function isA(other: int): bool {
 }
 
 const is9A = isA(9);
+
+if (is9A) {
+  return 42;
+} else {
+  return 69;
+}

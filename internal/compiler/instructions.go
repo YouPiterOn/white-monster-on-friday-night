@@ -38,6 +38,8 @@ const (
 	CLOSURE
 	CALL
 	RETURN
+	JUMP_IF_FALSE
+	JUMP
 )
 
 func (o OpCode) String() string {
@@ -64,6 +66,8 @@ func (o OpCode) String() string {
 		"CLOSURE",
 		"CALL",
 		"RETURN",
+		"JUMP_IF_FALSE",
+		"JUMP",
 	}[o]
 }
 
@@ -225,5 +229,19 @@ func InstrCall(resultReg int, functionReg int, args []int) Instruction {
 	return Instruction{
 		OpCode: CALL,
 		Args:   append([]int{resultReg, functionReg}, args...),
+	}
+}
+
+func InstrJumpIfFalse(reg int, target int) Instruction {
+	return Instruction{
+		OpCode: JUMP_IF_FALSE,
+		Args:   []int{reg, target},
+	}
+}
+
+func InstrJump(target int) Instruction {
+	return Instruction{
+		OpCode: JUMP,
+		Args:   []int{target},
 	}
 }

@@ -14,4 +14,5 @@ type Visitor[R any] interface {
 	VisitFunction(n *Function) R
 	VisitBlock(n *Block) R
 	VisitCallExpr(n *CallExpr) R
+	VisitIf(n *If) R
 }

@@ -296,6 +296,22 @@ func (l *Lexer) flushIdentifier() (*Token, *common.Error) {
 			Pos:     &pos,
 		}, nil
 	}
+	if lex == "if" {
+		return &Token{
+			Lexeme:  lex,
+			Kind:    Keyword,
+			Subkind: KeywordIf,
+			Pos:     &pos,
+		}, nil
+	}
+	if lex == "else" {
+		return &Token{
+			Lexeme:  lex,
+			Kind:    Keyword,
+			Subkind: KeywordElse,
+			Pos:     &pos,
+		}, nil
+	}
 
 	// constants
 	if lex == "true" {
