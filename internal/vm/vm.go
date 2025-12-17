@@ -1,16 +1,22 @@
 package vm
 
 import (
+	"fmt"
+
 	"youpiteron.dev/white-monster-on-friday-night/internal/compiler"
+	"youpiteron.dev/white-monster-on-friday-night/internal/native"
 )
 
 type VM struct {
 	frames         []Frame
 	functionProtos []compiler.FunctionProto
+	globals        []compiler.Value
 }
 
-func NewVM(functionProtos []compiler.FunctionProto) *VM {
-	return &VM{frames: make([]Frame, 0), functionProtos: functionProtos}
+func NewVM(functionProtos []compiler.FunctionProto, gt *compiler.GlobalTable) *VM {
+	vm := &VM{frames: make([]Frame, 0), functionProtos: functionProtos, globals: make([]compiler.Value, gt.Length())}
+	vm.initStdlibValues(gt)
+	return vm
 }
 
 func (v *VM) Run() int {
@@ -26,6 +32,16 @@ func (v *VM) Run() int {
 		return 0
 	}
 	return retval.Int
+}
+
+func (v *VM) initStdlibValues(gt *compiler.GlobalTable) {
+	// print
+	if variable, ok := gt.FindVariable("println"); ok {
+		v.globals[variable.Slot] = compiler.Value{
+			TypeOf: compiler.VAL_NATIVE_FUNCTION,
+			Native: native.Println,
+		}
+	}
 }
 
 func (v *VM) currentFrame() *Frame {
@@ -44,10 +60,14 @@ func (v *VM) runFunction(functionProto *compiler.FunctionProto) *compiler.Value 
 			v.opLoadConst(instruction.Args)
 		case compiler.LOAD_VAR:
 			v.opLoadVar(instruction.Args)
+		case compiler.LOAD_GLOBAL:
+			v.opLoadGlobal(instruction.Args)
 		case compiler.LOAD_UPVAR:
 			v.opLoadUpvar(instruction.Args)
 		case compiler.STORE_VAR:
 			v.opStoreVar(instruction.Args)
+		case compiler.ASSIGN_GLOBAL:
+			v.opAssignGlobal(instruction.Args)
 		case compiler.ASSIGN_UPVAR:
 			v.opAssignUpvar(instruction.Args)
 		case compiler.ADD_INT:
@@ -106,6 +126,11 @@ func (v *VM) opLoadVar(args []int) {
 	v.currentFrame().SetRegister(args[0], *value)
 }
 
+func (v *VM) opLoadGlobal(args []int) {
+	value := v.globals[args[1]]
+	v.currentFrame().SetRegister(args[0], value)
+}
+
 func (v *VM) opLoadUpvar(args []int) {
 	value := v.currentFrame().GetUpvar(args[1])
 	v.currentFrame().SetRegister(args[0], *value)
@@ -114,6 +139,11 @@ func (v *VM) opLoadUpvar(args []int) {
 func (v *VM) opStoreVar(args []int) {
 	value := v.currentFrame().GetRegister(args[0])
 	v.currentFrame().SetLocal(args[1], *value)
+}
+
+func (v *VM) opAssignGlobal(args []int) {
+	value := v.currentFrame().GetRegister(args[0])
+	v.globals[args[1]] = *value
 }
 
 func (v *VM) opAssignUpvar(args []int) {
@@ -235,18 +265,31 @@ func (v *VM) opClosure(args []int) {
 
 func (v *VM) opCall(args []int) {
 	function := v.currentFrame().GetRegister(args[1])
-	if function.TypeOf != compiler.VAL_CLOSURE {
-		panic("VM ERROR: invalid operand type for call")
+	funcArgs := args[2:]
+	switch function.TypeOf {
+	case compiler.VAL_CLOSURE:
+		frame := NewFrame(&function.Closure)
+		for i, argument := range funcArgs {
+			value := v.currentFrame().GetRegister(argument)
+			frame.SetLocal(i, *value)
+		}
+		v.frames = append(v.frames, *frame)
+		functionProto := function.Closure.Proto
+		retval := v.runFunction(functionProto)
+		v.currentFrame().SetRegister(args[0], *retval)
+		return
+	case compiler.VAL_NATIVE_FUNCTION:
+		values := make([]compiler.Value, len(funcArgs))
+		for i, argument := range funcArgs {
+			values[i] = *v.currentFrame().GetRegister(argument)
+		}
+		retval, err := function.Native(values...)
+		if err != nil {
+			panic(fmt.Sprintf("VM ERROR: native function %v returned error: %v", function.Native, err))
+		}
+		v.currentFrame().SetRegister(args[0], retval)
+		return
 	}
-	frame := NewFrame(&function.Closure)
-	for i, argument := range args[2:] {
-		value := v.currentFrame().GetRegister(argument)
-		frame.SetLocal(i, *value)
-	}
-	v.frames = append(v.frames, *frame)
-	functionProto := function.Closure.Proto
-	retval := v.runFunction(functionProto)
-	v.currentFrame().SetRegister(args[0], *retval)
 }
 
 func (v *VM) opReturn(args []int) {

@@ -16,6 +16,8 @@ function lessThenA(other: int): bool {
   return other < a;
 }
 
+println(69)
+
 if (lessThenA(69)) {
   return a;
 } else {

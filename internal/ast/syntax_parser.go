@@ -79,6 +79,8 @@ func (p *Parser) ParseStatement() Statement {
 		return nil
 	}
 
+	next := p.peek(1)
+
 	if t.Kind == lexer.Punctuator && t.Subkind == lexer.BlockStart {
 		return p.ParseBlock()
 	}
@@ -95,7 +97,7 @@ func (p *Parser) ParseStatement() Statement {
 		return p.ParseDeclaration()
 	}
 
-	if t.Kind == lexer.Identifier && t.Subkind == lexer.IdentifierName {
+	if t.Kind == lexer.Identifier && t.Subkind == lexer.IdentifierName && next != nil && next.Kind == lexer.Punctuator && next.Subkind == lexer.Assign {
 		return p.ParseAssignment()
 	}
 
@@ -103,8 +105,13 @@ func (p *Parser) ParseStatement() Statement {
 		return p.ParseIf()
 	}
 
-	p.addError(fmt.Sprintf("expected statement but got %v(%v)", t.Kind, t.Subkind), t.Pos)
-	return nil
+	expression := p.ParseExpression()
+	if expression == nil {
+		p.addError(fmt.Sprintf("expected statement but got %v(%v)", t.Kind, t.Subkind), t.Pos)
+		return nil
+	}
+
+	return expression
 }
 
 func (p *Parser) ParseFunction() Statement {

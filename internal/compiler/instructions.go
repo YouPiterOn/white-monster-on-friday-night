@@ -18,8 +18,10 @@ type OpCode int
 const (
 	LOAD_CONST OpCode = iota
 	LOAD_VAR
+	LOAD_GLOBAL
 	LOAD_UPVAR
 	STORE_VAR
+	ASSIGN_GLOBAL
 	ASSIGN_UPVAR
 	ADD_INT
 	SUB_INT
@@ -46,8 +48,10 @@ func (o OpCode) String() string {
 	return [...]string{
 		"LOAD_CONST",
 		"LOAD_VAR",
+		"LOAD_GLOBAL",
 		"LOAD_UPVAR",
 		"STORE_VAR",
+		"ASSIGN_GLOBAL",
 		"ASSIGN_UPVAR",
 		"ADD_INT",
 		"SUB_INT",
@@ -85,6 +89,13 @@ func InstrLoadVar(reg int, slot int) Instruction {
 	}
 }
 
+func InstrLoadGlobal(reg int, slot int) Instruction {
+	return Instruction{
+		OpCode: LOAD_GLOBAL,
+		Args:   []int{reg, slot},
+	}
+}
+
 func InstrLoadUpvar(reg int, slot int) Instruction {
 	return Instruction{
 		OpCode: LOAD_UPVAR,
@@ -95,6 +106,13 @@ func InstrLoadUpvar(reg int, slot int) Instruction {
 func InstrStoreVar(reg int, slot int) Instruction {
 	return Instruction{
 		OpCode: STORE_VAR,
+		Args:   []int{reg, slot},
+	}
+}
+
+func InstrAssignGlobal(reg int, slot int) Instruction {
+	return Instruction{
+		OpCode: ASSIGN_GLOBAL,
 		Args:   []int{reg, slot},
 	}
 }

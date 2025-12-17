@@ -50,9 +50,9 @@ func main() {
 	}
 
 	compiler := compiler.NewCompiler()
-	functionProtos := compiler.Compile(program)
+	compileResult := compiler.Compile(program)
 
-	vm := vm.NewVM(functionProtos)
+	vm := vm.NewVM(compileResult.FunctionProtos, compileResult.GlobalTable)
 	retval := vm.Run()
 	fmt.Printf("retval: %d\n", retval)
 }

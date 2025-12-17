@@ -13,6 +13,7 @@ const (
 	VAL_BOOL
 	VAL_CLOSURE
 	VAL_NULL
+	VAL_NATIVE_FUNCTION
 )
 
 func (t ValueType) String() string {
@@ -21,6 +22,7 @@ func (t ValueType) String() string {
 		"BOOL",
 		"CLOSURE",
 		"NULL",
+		"NATIVE_FUNCTION",
 	}[t]
 }
 
@@ -53,6 +55,7 @@ type Value struct {
 	Int     int
 	Bool    bool
 	Closure Closure
+	Native  NativeFunction
 }
 
 func NewIntValue(value int) Value {
@@ -71,6 +74,10 @@ func NewClosureValue(proto *FunctionProto) Value {
 	return Value{TypeOf: VAL_CLOSURE, Closure: *NewClosure(proto)}
 }
 
+func NewNativeFunctionValue(function NativeFunction) Value {
+	return Value{TypeOf: VAL_NATIVE_FUNCTION, Native: function}
+}
+
 type UpvalueCell struct {
 	Ptr *Value
 }
@@ -83,3 +90,5 @@ type Closure struct {
 func NewClosure(proto *FunctionProto) *Closure {
 	return &Closure{Proto: proto, Upvalues: make([]*UpvalueCell, len(proto.Upvars))}
 }
+
+type NativeFunction func(args ...Value) (Value, error)
