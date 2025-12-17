@@ -25,18 +25,17 @@ func CastVisitExprResult(result any) (*VisitExprResult, bool) {
 }
 
 type InstructionsVisitor struct {
-	scope            *Scope
-	errors           []common.Error
-	warnings         []common.Error
-	reg              int
-	functionBuilders []FunctionBuilder
-	functionProtos   []FunctionProto
+	context        *Context
+	errors         []common.Error
+	warnings       []common.Error
+	reg            int
+	functionProtos []FunctionProto
 }
 
 // ---------- Constructor ----------
 
 func NewInstructionsVisitor() *InstructionsVisitor {
-	return &InstructionsVisitor{scope: nil, errors: []common.Error{}, warnings: []common.Error{}, reg: 0, functionBuilders: []FunctionBuilder{}, functionProtos: []FunctionProto{}}
+	return &InstructionsVisitor{context: nil, errors: []common.Error{}, warnings: []common.Error{}, reg: 0, functionProtos: []FunctionProto{}}
 }
 
 // ---------- Helpers ----------
@@ -62,81 +61,55 @@ func (v *InstructionsVisitor) resetReg() int {
 }
 
 func (v *InstructionsVisitor) addInstruction(instruction Instruction) int {
-	functionBuilder := v.currentFunctionBuilder()
-	functionBuilder.AddInstruction(instruction)
-	return len(functionBuilder.Instructions) - 1
+	v.context.AddInstruction(instruction)
+	return len(v.context.instructions) - 1
 }
 
 func (v *InstructionsVisitor) setInstruction(index int, instruction Instruction) {
-	functionBuilder := v.currentFunctionBuilder()
-	functionBuilder.Instructions[index] = instruction
+	v.context.instructions[index] = instruction
 }
 
 func (v *InstructionsVisitor) instructionsLength() int {
-	functionBuilder := v.currentFunctionBuilder()
-	return len(functionBuilder.Instructions)
+	return len(v.context.instructions)
 }
 
-func (v *InstructionsVisitor) addConstant(value Value) int {
-	if len(v.functionBuilders) == 0 {
-		panic("COMPILER ERROR: no function builder found")
+func (v *InstructionsVisitor) buildFunctionProto() int {
+	if !v.context.isClosureContext {
+		panic("COMPILER ERROR: no context found")
 	}
-	return v.functionBuilders[len(v.functionBuilders)-1].AddConstant(value)
-}
-
-func (v *InstructionsVisitor) addParam(param ValueType) {
-	if len(v.functionBuilders) == 0 {
-		panic("COMPILER ERROR: no function builder found")
+	functionProto, ok := v.context.BuildFunctionProto()
+	if !ok {
+		panic("COMPILER ERROR: failed to build function proto")
 	}
-	v.functionBuilders[len(v.functionBuilders)-1].AddParam(param)
-}
-
-func (v *InstructionsVisitor) addFunctionBuilder(functionBuilder FunctionBuilder) {
-	v.functionBuilders = append(v.functionBuilders, functionBuilder)
-}
-
-func (v *InstructionsVisitor) buildFunctionProto(scope *Scope) int {
-	if len(v.functionBuilders) == 0 {
-		panic("COMPILER ERROR: no function builder found")
-	}
-	functionBuilder := v.functionBuilders[len(v.functionBuilders)-1]
-	v.functionProtos = append(v.functionProtos, functionBuilder.Build(scope))
-	v.functionBuilders = v.functionBuilders[:len(v.functionBuilders)-1]
+	v.functionProtos = append(v.functionProtos, *functionProto)
 	return len(v.functionProtos) - 1
 }
 
-func (v *InstructionsVisitor) currentFunctionBuilder() *FunctionBuilder {
-	if len(v.functionBuilders) == 0 {
-		panic("COMPILER ERROR: no function builder found")
-	}
-	return &v.functionBuilders[len(v.functionBuilders)-1]
-}
-
-func (v *InstructionsVisitor) enterFunctionScope(returnType ValueType) {
-	if v.scope == nil {
-		v.scope = NewScope(true)
+func (v *InstructionsVisitor) enterFunctionContext(returnType ValueType) {
+	if v.context == nil {
+		v.context = NewContext(true)
 	} else {
-		v.scope = v.scope.NewChildScope(true)
+		v.context = v.context.NewChildContext(true)
 	}
-	v.addFunctionBuilder(*NewFunctionBuilder(returnType))
+	v.context.returnType = returnType
 }
 
-func (v *InstructionsVisitor) exitFunctionScope() int {
-	functionSlot := v.buildFunctionProto(v.scope)
-	v.scope = v.scope.parent
-	return functionSlot
+func (v *InstructionsVisitor) exitFunctionContext() int {
+	slot := v.buildFunctionProto()
+	v.context = v.context.parent
+	return slot
 }
 
-func (v *InstructionsVisitor) enterBlockScope() {
-	if v.scope == nil {
-		v.scope = NewScope(false)
+func (v *InstructionsVisitor) enterBlockContext() {
+	if v.context == nil {
+		v.context = NewContext(false)
 	} else {
-		v.scope = v.scope.NewChildScope(false)
+		v.context = v.context.NewChildContext(false)
 	}
 }
 
-func (v *InstructionsVisitor) exitBlockScope() {
-	v.scope = v.scope.parent
+func (v *InstructionsVisitor) exitBlockContext() {
+	v.context = v.context.parent
 }
 
 // ---------- Getters ----------
@@ -156,17 +129,17 @@ func (v *InstructionsVisitor) FunctionProtos() []FunctionProto {
 // ---------- Visitor Implementations ----------
 
 func (v *InstructionsVisitor) VisitProgram(n *ast.Program) any {
-	v.enterFunctionScope(VAL_INT)
+	v.enterFunctionContext(VAL_INT)
 	for _, statement := range n.Statements {
 		statement.Visit(v)
 		v.resetReg()
 	}
-	v.exitFunctionScope()
+	v.exitFunctionContext()
 	return nil
 }
 
 func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
-	_, ok := v.scope.FindLocalVariable(n.Identifier.Name)
+	_, ok := v.context.FindLocalVariable(n.Identifier.Name)
 	if ok {
 		v.addError(fmt.Sprintf("variable %s already defined", n.Identifier.Name), n.Identifier.Pos())
 		return nil
@@ -185,7 +158,7 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 			}
 		}
 
-		slot := v.scope.DefineVariable(n.Identifier.Name, n.IsMutable, resultVisitExpr.TypeOf)
+		slot := v.context.DefineVariable(n.Identifier.Name, n.IsMutable, resultVisitExpr.TypeOf)
 
 		v.addInstruction(InstrStoreVar(resultVisitExpr.Reg, slot))
 	} else {
@@ -198,8 +171,8 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 			return nil
 		}
 		defaultValue := ValueTypeFromTypeSubkind(n.TypeOf).DefaultValue()
-		constIndex := v.addConstant(defaultValue)
-		slot := v.scope.DefineVariable(n.Identifier.Name, n.IsMutable, ValueTypeFromTypeSubkind(n.TypeOf))
+		constIndex := v.context.AddConstant(defaultValue)
+		slot := v.context.DefineVariable(n.Identifier.Name, n.IsMutable, ValueTypeFromTypeSubkind(n.TypeOf))
 
 		reg := v.nextReg()
 		v.addInstruction(InstrLoadConst(reg, constIndex))
@@ -210,7 +183,7 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 }
 
 func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
-	localVar, upvar, ok := v.scope.FindVariable(n.Identifier.Name)
+	localVar, upvar, ok := v.context.FindVariable(n.Identifier.Name)
 	if !ok {
 		v.addError(fmt.Sprintf("variable %s not found", n.Identifier.Name), n.Identifier.Pos())
 		return nil
@@ -252,9 +225,9 @@ func (v *InstructionsVisitor) VisitReturn(n *ast.Return) any {
 	if !ok {
 		return nil
 	}
-	builder := v.currentFunctionBuilder()
-	if resultVisitExpr.TypeOf != builder.ReturnType {
-		v.addError(fmt.Sprintf("return value must be of type %s, but got %s", builder.ReturnType, resultVisitExpr.TypeOf), n.Value.Pos())
+	returnType := v.context.returnType
+	if resultVisitExpr.TypeOf != returnType {
+		v.addError(fmt.Sprintf("return value must be of type %s, but got %s", returnType, resultVisitExpr.TypeOf), n.Value.Pos())
 		return nil
 	}
 	v.addInstruction(InstrReturn(resultVisitExpr.Reg))
@@ -263,27 +236,27 @@ func (v *InstructionsVisitor) VisitReturn(n *ast.Return) any {
 
 func (v *InstructionsVisitor) VisitIntLiteral(n *ast.IntLiteral) any {
 	reg := v.nextReg()
-	constIndex := v.addConstant(NewIntValue(n.Value))
+	constIndex := v.context.AddConstant(NewIntValue(n.Value))
 	v.addInstruction(InstrLoadConst(reg, constIndex))
 	return &VisitExprResult{Reg: reg, TypeOf: VAL_INT}
 }
 
 func (v *InstructionsVisitor) VisitBoolLiteral(n *ast.BoolLiteral) any {
 	reg := v.nextReg()
-	constIndex := v.addConstant(NewBoolValue(n.Value))
+	constIndex := v.context.AddConstant(NewBoolValue(n.Value))
 	v.addInstruction(InstrLoadConst(reg, constIndex))
 	return &VisitExprResult{Reg: reg, TypeOf: VAL_BOOL}
 }
 
 func (v *InstructionsVisitor) VisitNullLiteral(n *ast.NullLiteral) any {
 	reg := v.nextReg()
-	constIndex := v.addConstant(NewNullValue())
+	constIndex := v.context.AddConstant(NewNullValue())
 	v.addInstruction(InstrLoadConst(reg, constIndex))
 	return &VisitExprResult{Reg: reg, TypeOf: VAL_NULL}
 }
 
 func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
-	localVar, upvar, ok := v.scope.FindVariable(n.Name)
+	localVar, upvar, ok := v.context.FindVariable(n.Name)
 	if !ok {
 		v.addError(fmt.Sprintf("variable %s not found", n.Name), n.Pos())
 		return nil
@@ -326,19 +299,19 @@ func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
 }
 
 func (v *InstructionsVisitor) VisitParam(n *ast.Param) any {
-	v.addParam(ValueTypeFromTypeSubkind(n.TypeOf))
-	v.scope.DefineVariable(n.Name, false, ValueTypeFromTypeSubkind(n.TypeOf))
+	v.context.AddParam(ValueTypeFromTypeSubkind(n.TypeOf))
+	v.context.DefineVariable(n.Name, false, ValueTypeFromTypeSubkind(n.TypeOf))
 	return nil
 }
 
 func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
-	_, ok := v.scope.FindLocalVariable(n.Name)
+	_, ok := v.context.FindLocalVariable(n.Name)
 	if ok {
 		v.addError(fmt.Sprintf("variable %s already defined", n.Name), n.Pos())
 		return nil
 	}
 
-	v.enterFunctionScope(ValueTypeFromTypeSubkind(n.ReturnType))
+	v.enterFunctionContext(ValueTypeFromTypeSubkind(n.ReturnType))
 
 	for _, param := range n.Params {
 		param.Visit(v)
@@ -347,11 +320,12 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 		statement.Visit(v)
 	}
 
-	builder := v.currentFunctionBuilder()
+	params := v.context.params
+	returnType := v.context.returnType
 
-	functionSlot := v.exitFunctionScope()
+	functionSlot := v.exitFunctionContext()
 
-	slot := v.scope.DefineCallableVariable(n.Name, false, VAL_CLOSURE, builder.Params, builder.ReturnType)
+	slot := v.context.DefineCallableVariable(n.Name, false, VAL_CLOSURE, params, returnType)
 	reg := v.nextReg()
 	v.addInstruction(InstrClosure(reg, functionSlot))
 	v.addInstruction(InstrStoreVar(reg, slot))
@@ -359,11 +333,11 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 }
 
 func (v *InstructionsVisitor) VisitBlock(n *ast.Block) any {
-	v.enterBlockScope()
+	v.enterBlockContext()
 	for _, statement := range n.Statements {
 		statement.Visit(v)
 	}
-	v.exitBlockScope()
+	v.exitBlockContext()
 	return nil
 }
 
