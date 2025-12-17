@@ -13,6 +13,8 @@ type VM struct {
 	globals        []compiler.Value
 }
 
+func (v *VM) ImplementVMInterface() {}
+
 func NewVM(functionProtos []compiler.FunctionProto, gt *compiler.GlobalTable) *VM {
 	vm := &VM{frames: make([]Frame, 0), functionProtos: functionProtos, globals: make([]compiler.Value, gt.Length())}
 	vm.initStdlibValues(gt)
@@ -283,7 +285,7 @@ func (v *VM) opCall(args []int) {
 		for i, argument := range funcArgs {
 			values[i] = *v.currentFrame().GetRegister(argument)
 		}
-		retval, err := function.Native(values...)
+		retval, err := function.Native(v, values...)
 		if err != nil {
 			panic(fmt.Sprintf("VM ERROR: native function %v returned error: %v", function.Native, err))
 		}

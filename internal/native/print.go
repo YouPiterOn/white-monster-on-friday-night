@@ -3,10 +3,11 @@ package native
 import (
 	"fmt"
 
+	"youpiteron.dev/white-monster-on-friday-night/internal/api"
 	"youpiteron.dev/white-monster-on-friday-night/internal/compiler"
 )
 
-func Println(args ...compiler.Value) (compiler.Value, error) {
+func Println(vm api.VM, args ...compiler.Value) (compiler.Value, error) {
 	values := make([]any, 0, len(args))
 	for _, arg := range args {
 		switch arg.TypeOf {

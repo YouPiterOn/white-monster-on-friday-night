@@ -3,6 +3,7 @@ package compiler
 import (
 	"fmt"
 
+	"youpiteron.dev/white-monster-on-friday-night/internal/api"
 	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 )
 
@@ -91,4 +92,4 @@ func NewClosure(proto *FunctionProto) *Closure {
 	return &Closure{Proto: proto, Upvalues: make([]*UpvalueCell, len(proto.Upvars))}
 }
 
-type NativeFunction func(args ...Value) (Value, error)
+type NativeFunction func(vm api.VM, args ...Value) (Value, error)
