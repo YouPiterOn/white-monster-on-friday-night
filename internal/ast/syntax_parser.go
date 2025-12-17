@@ -357,53 +357,194 @@ func (p *Parser) ParseIf() *If {
 }
 
 func (p *Parser) ParseExpression() Expression {
-	next := p.peek(1)
-	if next != nil && next.Kind == lexer.Operator {
-		return p.ParseBinaryExpr()
-	}
-	if next != nil && next.Kind == lexer.Punctuator && next.Subkind == lexer.ParenOpen {
-		return p.ParseCallExpr()
-	}
-	return p.ParseFactor()
+	return p.ParseLogicalOrExpr()
 }
 
-func (p *Parser) ParseCallExpr() Expression {
-	identifier := p.ParseIdentifier()
-	if identifier == nil {
+func (p *Parser) ParseLogicalOrExpr() Expression {
+	left := p.ParseLogicalAndExpr()
+	if left == nil {
 		return nil
 	}
-	lparen := p.eatExpected(lexer.Punctuator, lexer.ParenOpen, "expected '('")
-	if lparen == nil {
-		return nil
-	}
-	arguments := []Expression{}
-	t := p.peek(0)
-	if t == nil {
-		return nil
-	}
-	if t.Kind == lexer.Punctuator && t.Subkind == lexer.ParenClose {
-		return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
-	}
+
 	for {
-		argument := p.ParseExpression()
-		if argument == nil {
+		op := p.peek(0)
+		if op == nil || op.Kind != lexer.Operator || op.Subkind != lexer.OperatorOr {
 			break
 		}
-		arguments = append(arguments, argument)
-		commaTok := p.peek(0)
-		if commaTok == nil || !(commaTok.Kind == lexer.Punctuator && commaTok.Subkind == lexer.Comma) {
-			break
-		}
+
 		p.eat()
+		right := p.ParseLogicalAndExpr()
+		if right == nil {
+			return nil
+		}
+
+		left = &BinaryExpr{Left: left, Operator: lexer.OperatorOr, Right: right}
 	}
-	rparen := p.eatExpected(lexer.Punctuator, lexer.ParenClose, "expected ')'")
-	if rparen == nil {
-		return nil
-	}
-	return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
+
+	return left
 }
 
-func (p *Parser) ParseFactor() Factor {
+func (p *Parser) ParseLogicalAndExpr() Expression {
+	left := p.ParseEqualityExpr()
+	if left == nil {
+		return nil
+	}
+
+	for {
+		op := p.peek(0)
+		if op == nil || op.Kind != lexer.Operator || op.Subkind != lexer.OperatorAnd {
+			break
+		}
+
+		p.eat()
+		right := p.ParseEqualityExpr()
+		if right == nil {
+			return nil
+		}
+
+		left = &BinaryExpr{Left: left, Operator: lexer.OperatorAnd, Right: right}
+	}
+
+	return left
+}
+
+func (p *Parser) ParseEqualityExpr() Expression {
+	left := p.ParseComparisonExpr()
+	if left == nil {
+		return nil
+	}
+
+	for {
+		op := p.peek(0)
+		if op == nil || op.Kind != lexer.Operator ||
+			(op.Subkind != lexer.OperatorEqual &&
+				op.Subkind != lexer.OperatorNotEqual) {
+			break
+		}
+
+		p.eat()
+		right := p.ParseComparisonExpr()
+		if right == nil {
+			return nil
+		}
+
+		left = &BinaryExpr{Left: left, Operator: op.Subkind.(lexer.OperatorSubkind), Right: right}
+	}
+
+	return left
+}
+
+func (p *Parser) ParseComparisonExpr() Expression {
+	left := p.ParseAdditiveExpr()
+	if left == nil {
+		return nil
+	}
+
+	for {
+		op := p.peek(0)
+		if op == nil || op.Kind != lexer.Operator ||
+			(op.Subkind != lexer.OperatorLess &&
+				op.Subkind != lexer.OperatorLessEqual &&
+				op.Subkind != lexer.OperatorGreater &&
+				op.Subkind != lexer.OperatorGreaterEqual) {
+			break
+		}
+
+		p.eat()
+		right := p.ParseAdditiveExpr()
+		if right == nil {
+			return nil
+		}
+
+		left = &BinaryExpr{Left: left, Operator: op.Subkind.(lexer.OperatorSubkind), Right: right}
+	}
+
+	return left
+}
+
+func (p *Parser) ParseAdditiveExpr() Expression {
+	left := p.ParseMultiplicativeExpr()
+	if left == nil {
+		return nil
+	}
+
+	for {
+		op := p.peek(0)
+		if op == nil || op.Kind != lexer.Operator ||
+			(op.Subkind != lexer.OperatorPlus && op.Subkind != lexer.OperatorMinus) {
+			break
+		}
+
+		p.eat()
+		right := p.ParseMultiplicativeExpr()
+		if right == nil {
+			return nil
+		}
+
+		left = &BinaryExpr{
+			Left:     left,
+			Operator: op.Subkind.(lexer.OperatorSubkind),
+			Right:    right,
+			PosAt:    op.Pos,
+		}
+	}
+
+	return left
+}
+
+func (p *Parser) ParseMultiplicativeExpr() Expression {
+	left := p.ParsePrimaryExpr()
+	if left == nil {
+		return nil
+	}
+
+	for {
+		op := p.peek(0)
+		if op == nil || op.Kind != lexer.Operator ||
+			(op.Subkind != lexer.OperatorStar && op.Subkind != lexer.OperatorSlash) {
+			break
+		}
+
+		p.eat()
+		right := p.ParsePrimaryExpr()
+		if right == nil {
+			return nil
+		}
+
+		left = &BinaryExpr{
+			Left:     left,
+			Operator: op.Subkind.(lexer.OperatorSubkind),
+			Right:    right,
+			PosAt:    op.Pos,
+		}
+	}
+
+	return left
+}
+
+func (p *Parser) ParsePrimaryExpr() Expression {
+	tok := p.peek(0)
+
+	if tok.Kind == lexer.Punctuator && tok.Subkind == lexer.ParenOpen {
+		p.eat()
+
+		expr := p.ParseExpression()
+		if expr == nil {
+			return nil
+		}
+
+		rparen := p.eatExpected(lexer.Punctuator, lexer.ParenClose, "expected ')'")
+		if rparen == nil {
+			return nil
+		}
+
+		return expr
+	}
+
+	return p.ParseAtomExpr()
+}
+
+func (p *Parser) ParseAtomExpr() Expression {
 	t := p.peek(0)
 	if t == nil {
 		return nil
@@ -422,14 +563,17 @@ func (p *Parser) ParseFactor() Factor {
 	}
 
 	if t.Kind == lexer.Identifier {
+		lparen := p.peek(1)
+		if lparen != nil && lparen.Kind == lexer.Punctuator && lparen.Subkind == lexer.ParenOpen {
+			return p.ParseCallExpr()
+		}
 		return p.ParseIdentifier()
 	}
 
-	p.addError(fmt.Sprintf("expected factor but got %v(%v)", t.Kind, t.Subkind), t.Pos)
 	return nil
 }
 
-// ---------- Literals ----------
+// ---------- Atoms ----------
 
 func (p *Parser) ParseIntLiteral() *IntLiteral {
 	t := p.eat()
@@ -480,28 +624,40 @@ func (p *Parser) ParseIdentifier() *Identifier {
 	return &Identifier{Name: idTok.Lexeme, PosAt: idTok.Pos}
 }
 
-func (p *Parser) ParseBinaryExpr() Expression {
-	left := p.ParseFactor()
-	if left == nil {
+func (p *Parser) ParseCallExpr() *CallExpr {
+	identifier := p.ParseIdentifier()
+	if identifier == nil {
 		return nil
 	}
-
-	op := p.eat()
-	if op == nil || op.Kind != lexer.Operator {
+	lparen := p.eatExpected(lexer.Punctuator, lexer.ParenOpen, "expected '('")
+	if lparen == nil {
 		return nil
 	}
-
-	right := p.ParseExpression()
-	if right == nil {
+	arguments := []Expression{}
+	t := p.peek(0)
+	if t == nil {
 		return nil
 	}
-
-	return &BinaryExpr{
-		Left:     left,
-		Operator: op.Subkind.(lexer.OperatorSubkind),
-		Right:    right,
-		PosAt:    op.Pos,
+	if t.Kind == lexer.Punctuator && t.Subkind == lexer.ParenClose {
+		return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
 	}
+	for {
+		argument := p.ParseExpression()
+		if argument == nil {
+			break
+		}
+		arguments = append(arguments, argument)
+		commaTok := p.peek(0)
+		if commaTok == nil || !(commaTok.Kind == lexer.Punctuator && commaTok.Subkind == lexer.Comma) {
+			break
+		}
+		p.eat()
+	}
+	rparen := p.eatExpected(lexer.Punctuator, lexer.ParenClose, "expected ')'")
+	if rparen == nil {
+		return nil
+	}
+	return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
 }
 
 func atoi(s string) int {

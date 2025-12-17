@@ -10,11 +10,6 @@ type Expression interface {
 	expressionNode()
 }
 
-type Factor interface {
-	Expression
-	factorNode()
-}
-
 type IntLiteral struct {
 	Value int
 	PosAt *common.SourcePos
@@ -23,7 +18,6 @@ type IntLiteral struct {
 func (n *IntLiteral) Pos() *common.SourcePos { return n.PosAt }
 func (n *IntLiteral) statementNode()         {}
 func (n *IntLiteral) expressionNode()        {}
-func (n *IntLiteral) factorNode()            {}
 func (n *IntLiteral) Visit(v Visitor[any]) any {
 	return v.VisitIntLiteral(n)
 }
@@ -36,7 +30,6 @@ type BoolLiteral struct {
 func (b *BoolLiteral) Pos() *common.SourcePos { return b.PosAt }
 func (b *BoolLiteral) statementNode()         {}
 func (b *BoolLiteral) expressionNode()        {}
-func (b *BoolLiteral) factorNode()            {}
 func (b *BoolLiteral) Visit(v Visitor[any]) any {
 	return v.VisitBoolLiteral(b)
 }
@@ -48,7 +41,6 @@ type NullLiteral struct {
 func (n *NullLiteral) Pos() *common.SourcePos { return n.PosAt }
 func (n *NullLiteral) statementNode()         {}
 func (n *NullLiteral) expressionNode()        {}
-func (n *NullLiteral) factorNode()            {}
 func (n *NullLiteral) Visit(v Visitor[any]) any {
 	return v.VisitNullLiteral(n)
 }
@@ -61,7 +53,6 @@ type Identifier struct {
 func (i *Identifier) Pos() *common.SourcePos { return i.PosAt }
 func (i *Identifier) statementNode()         {}
 func (i *Identifier) expressionNode()        {}
-func (i *Identifier) factorNode()            {}
 func (i *Identifier) Visit(v Visitor[any]) any {
 	return v.VisitIdentifier(i)
 }

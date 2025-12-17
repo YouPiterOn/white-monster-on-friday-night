@@ -9,17 +9,15 @@ a = 60;
 const b: int = 123;
 
 function addToA(other: int): int {
-  return a + other;
+  return (a + 0) + other;
 }
 
-function isA(other: int): bool {
-  return a == other;
+function lessThenA(other: int): bool {
+  return other < a;
 }
 
-const is9A = isA(9);
-
-if (false) {
-  return 42;
+if (lessThenA(69)) {
+  return a;
 } else {
-  return 69;
+  return addToA(42);
 }

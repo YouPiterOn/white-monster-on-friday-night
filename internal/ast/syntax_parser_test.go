@@ -287,27 +287,23 @@ func TestParseCallExpr_NoArguments(t *testing.T) {
 	if len(parser.Errors) > 0 {
 		t.Fatalf("unexpected errors: %v", parser.Errors)
 	}
-	call, ok := callExpr.(*CallExpr)
-	if !ok {
-		t.Fatalf("expected *CallExpr, got %T", callExpr)
+	if callExpr.Identifier.Name != "foo" {
+		t.Errorf("expected identifier name 'foo', got '%s'", callExpr.Identifier.Name)
 	}
-	if call.Identifier.Name != "foo" {
-		t.Errorf("expected identifier name 'foo', got '%s'", call.Identifier.Name)
-	}
-	if len(call.Arguments) != 0 {
-		t.Errorf("expected 0 arguments, got %d", len(call.Arguments))
+	if len(callExpr.Arguments) != 0 {
+		t.Errorf("expected 0 arguments, got %d", len(callExpr.Arguments))
 	}
 }
 
 // ---------- ParseFactor Tests ----------
 
-func TestParseFactor_IntLiteral(t *testing.T) {
+func TestParseMultiplicativeExpr_IntLiteral(t *testing.T) {
 	tokens := []lexer.Token{
 		makeToken("123", lexer.Constant, lexer.Integer, 0, 1, 1),
 	}
 
 	parser := NewParser(tokens)
-	factor := parser.ParseFactor()
+	factor := parser.ParseMultiplicativeExpr()
 
 	if factor == nil {
 		t.Fatal("expected factor but got nil")
@@ -402,33 +398,6 @@ func TestParseIdentifier_Basic(t *testing.T) {
 	}
 	if id.Name != "myVar" {
 		t.Errorf("expected name 'myVar', got '%s'", id.Name)
-	}
-}
-
-// ---------- ParseBinaryExpr Tests ----------
-
-func TestParseBinaryExpr_Addition(t *testing.T) {
-	tokens := []lexer.Token{
-		makeToken("5", lexer.Constant, lexer.Integer, 0, 1, 1),
-		makeToken("+", lexer.Operator, lexer.OperatorPlus, 2, 1, 3),
-		makeToken("3", lexer.Constant, lexer.Integer, 4, 1, 5),
-	}
-
-	parser := NewParser(tokens)
-	expr := parser.ParseBinaryExpr()
-
-	if expr == nil {
-		t.Fatal("expected binary expression but got nil")
-	}
-	if len(parser.Errors) > 0 {
-		t.Fatalf("unexpected errors: %v", parser.Errors)
-	}
-	binExpr, ok := expr.(*BinaryExpr)
-	if !ok {
-		t.Fatalf("expected BinaryExpr, got %T", expr)
-	}
-	if binExpr.Operator != lexer.OperatorPlus {
-		t.Errorf("expected operator OperatorPlus, got %v", binExpr.Operator)
 	}
 }
 
