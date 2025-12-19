@@ -10,7 +10,7 @@ func NewBlockContext(parent Context) *BlockContext {
 	return &BlockContext{parent: parent, variables: make(map[string]Variable), currentVarSlot: parent.VarSlot()}
 }
 
-func (c *BlockContext) ImplementContext() Context {
+func (c *BlockContext) ImplementContextInterface() Context {
 	return c
 }
 

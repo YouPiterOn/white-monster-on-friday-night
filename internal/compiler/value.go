@@ -84,12 +84,12 @@ type UpvalueCell struct {
 }
 
 type Closure struct {
-	Proto    *FunctionProto
+	Proto    Proto
 	Upvalues []*UpvalueCell
 }
 
-func NewClosure(proto *FunctionProto) *Closure {
-	return &Closure{Proto: proto, Upvalues: make([]*UpvalueCell, len(proto.Upvars))}
+func NewClosure(proto Proto) *Closure {
+	return &Closure{Proto: proto, Upvalues: make([]*UpvalueCell, proto.NumLocals())}
 }
 
 type NativeFunction func(vm api.VM, args ...Value) (Value, error)

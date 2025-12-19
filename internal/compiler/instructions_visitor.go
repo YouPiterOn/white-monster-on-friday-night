@@ -31,6 +31,7 @@ type InstructionsVisitor struct {
 	warnings       []common.Error
 	reg            int
 	functionProtos []FunctionProto
+	moduleProtos   []ModuleProto
 }
 
 // ---------- Constructor ----------
@@ -63,10 +64,15 @@ func (v *InstructionsVisitor) resetReg() int {
 	return reg
 }
 
-func (v *InstructionsVisitor) buildFunctionProto() int {
-	functionProto := BuildFunctionProto(v.context)
-	v.functionProtos = append(v.functionProtos, *functionProto)
-	return len(v.functionProtos) - 1
+func (v *InstructionsVisitor) enterModuleContext() {
+	v.context = NewModuleContext()
+}
+
+func (v *InstructionsVisitor) exitModuleContext() {
+	moduleProto := BuildModuleProto(v.context, v.functionProtos)
+	v.moduleProtos = append(v.moduleProtos, *moduleProto)
+	v.context = nil
+	v.functionProtos = []FunctionProto{}
 }
 
 func (v *InstructionsVisitor) enterFunctionContext(returnType ValueType) {
@@ -74,9 +80,10 @@ func (v *InstructionsVisitor) enterFunctionContext(returnType ValueType) {
 }
 
 func (v *InstructionsVisitor) exitFunctionContext() int {
-	slot := v.buildFunctionProto()
+	functionProto := BuildFunctionProto(v.context)
+	v.functionProtos = append(v.functionProtos, *functionProto)
 	v.context = v.context.Parent()
-	return slot
+	return len(v.functionProtos) - 1
 }
 
 func (v *InstructionsVisitor) enterBlockContext() {
@@ -90,12 +97,12 @@ func (v *InstructionsVisitor) exitBlockContext() {
 // ---------- Visitor Implementations ----------
 
 func (v *InstructionsVisitor) VisitProgram(n *ast.Program) any {
-	v.enterFunctionContext(VAL_INT)
+	v.enterModuleContext()
 	for _, statement := range n.Statements {
 		statement.Visit(v)
 		v.resetReg()
 	}
-	v.exitFunctionContext()
+	v.exitModuleContext()
 	return nil
 }
 

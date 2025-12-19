@@ -25,7 +25,7 @@ type Upvar struct {
 }
 
 type Context interface {
-	ImplementContext() Context
+	ImplementContextInterface() Context
 	DefineVariable(name string, mutable bool, typeOf ValueType) int
 	DefineFunctionVariable(name string, mutable bool, typeOf ValueType, funcSignature *FuncSignature) int
 	FindLocalVariable(name string) (*Variable, bool)

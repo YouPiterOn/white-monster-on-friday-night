@@ -25,7 +25,7 @@ func CastFunctionContext(context Context) *FunctionContext {
 	return functionContext
 }
 
-func (c *FunctionContext) ImplementContext() Context {
+func (c *FunctionContext) ImplementContextInterface() Context {
 	return c
 }
 
