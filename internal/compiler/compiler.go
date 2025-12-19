@@ -8,8 +8,8 @@ import (
 )
 
 type CompileResult struct {
-	FunctionProtos []FunctionProto
-	GlobalTable    *GlobalTable
+	ModuleProto ModuleProto
+	GlobalTable *GlobalTable
 }
 
 type Compiler struct {
@@ -29,8 +29,7 @@ func (c *Compiler) Compile(program *ast.Program) *CompileResult {
 		}
 		os.Exit(1)
 	}
-	for _, functionProto := range c.instructionsVisitor.functionProtos {
-		fmt.Printf("function proto: %s\n", functionProto.String())
-	}
-	return &CompileResult{FunctionProtos: c.instructionsVisitor.functionProtos, GlobalTable: c.instructionsVisitor.globalTable}
+	moduleProto := c.instructionsVisitor.moduleProtos[len(c.instructionsVisitor.moduleProtos)-1]
+	fmt.Printf("module proto: %s\n", moduleProto.String())
+	return &CompileResult{ModuleProto: moduleProto, GlobalTable: c.instructionsVisitor.globalTable}
 }

@@ -52,7 +52,7 @@ func main() {
 	compiler := compiler.NewCompiler()
 	compileResult := compiler.Compile(program)
 
-	vm := vm.NewVM(compileResult.FunctionProtos, compileResult.GlobalTable)
+	vm := vm.NewVM(compileResult.ModuleProto, compileResult.GlobalTable)
 	retval := vm.Run()
 	fmt.Printf("retval: %d\n", retval)
 }
