@@ -485,11 +485,11 @@ func TestParseStatement_Expression(t *testing.T) {
 	if len(parser.Errors) > 0 {
 		t.Fatalf("unexpected errors: %v", parser.Errors)
 	}
-	ret, ok := stmt.(*Return)
+	ret, ok := stmt.(*IntLiteral)
 	if !ok {
-		t.Fatalf("expected Return statement, got %T", stmt)
+		t.Fatalf("expected IntLiteral statement, got %T", stmt)
 	}
-	if ret.Value == nil {
-		t.Fatal("expected return value but got nil")
+	if ret.Value != 42 {
+		t.Errorf("expected value 42, got %d", ret.Value)
 	}
 }
