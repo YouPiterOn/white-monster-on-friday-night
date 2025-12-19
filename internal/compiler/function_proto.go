@@ -31,3 +31,20 @@ func (f *FunctionProto) String() string {
 	}
 	return fmt.Sprintf("Instructions:\n%s\nUpvars:\n%s", instructionsString, upvarsString)
 }
+
+func BuildFunctionProto(context Context) *FunctionProto {
+	functionContext := CastFunctionContext(context)
+	numLocals := functionContext.currentVarSlot
+	upvars := []UpvarDesc{}
+	for _, upvar := range functionContext.upvarsMap {
+		upvars = append(upvars, UpvarDesc{SlotInParent: upvar.SlotInParent, IsFromParent: upvar.IsFromParent})
+	}
+	return &FunctionProto{
+		NumLocals:    numLocals,
+		Params:       functionContext.params,
+		ReturnType:   functionContext.returnType,
+		Instructions: functionContext.instructions,
+		Upvars:       upvars,
+		Constants:    functionContext.constants,
+	}
+}

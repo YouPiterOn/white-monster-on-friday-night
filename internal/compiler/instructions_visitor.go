@@ -25,7 +25,7 @@ func CastVisitExprResult(result any) (*VisitExprResult, bool) {
 }
 
 type InstructionsVisitor struct {
-	context        *Context
+	context        Context
 	globalTable    *GlobalTable
 	errors         []common.Error
 	warnings       []common.Error
@@ -63,56 +63,28 @@ func (v *InstructionsVisitor) resetReg() int {
 	return reg
 }
 
-func (v *InstructionsVisitor) addInstruction(instruction Instruction) int {
-	v.context.AddInstruction(instruction)
-	return len(v.context.instructions) - 1
-}
-
-func (v *InstructionsVisitor) setInstruction(index int, instruction Instruction) {
-	v.context.instructions[index] = instruction
-}
-
-func (v *InstructionsVisitor) instructionsLength() int {
-	return len(v.context.instructions)
-}
-
 func (v *InstructionsVisitor) buildFunctionProto() int {
-	if !v.context.isClosureContext {
-		panic("COMPILER ERROR: no context found")
-	}
-	functionProto, ok := v.context.BuildFunctionProto()
-	if !ok {
-		panic("COMPILER ERROR: failed to build function proto")
-	}
+	functionProto := BuildFunctionProto(v.context)
 	v.functionProtos = append(v.functionProtos, *functionProto)
 	return len(v.functionProtos) - 1
 }
 
 func (v *InstructionsVisitor) enterFunctionContext(returnType ValueType) {
-	if v.context == nil {
-		v.context = NewContext(true)
-	} else {
-		v.context = v.context.NewChildContext(true)
-	}
-	v.context.returnType = returnType
+	v.context = NewFunctionContext(v.context, returnType)
 }
 
 func (v *InstructionsVisitor) exitFunctionContext() int {
 	slot := v.buildFunctionProto()
-	v.context = v.context.parent
+	v.context = v.context.Parent()
 	return slot
 }
 
 func (v *InstructionsVisitor) enterBlockContext() {
-	if v.context == nil {
-		v.context = NewContext(false)
-	} else {
-		v.context = v.context.NewChildContext(false)
-	}
+	v.context = NewBlockContext(v.context)
 }
 
 func (v *InstructionsVisitor) exitBlockContext() {
-	v.context = v.context.parent
+	v.context = v.context.Parent()
 }
 
 // ---------- Visitor Implementations ----------
@@ -149,7 +121,7 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 
 		slot := v.context.DefineVariable(n.Identifier.Name, n.IsMutable, resultVisitExpr.TypeOf)
 
-		v.addInstruction(InstrStoreVar(resultVisitExpr.Reg, slot))
+		v.context.AddInstruction(InstrStoreVar(resultVisitExpr.Reg, slot))
 	} else {
 		if !n.IsTyped {
 			v.addError(fmt.Sprintf("type is required for declaration of variable %s with default value", n.Identifier.Name), n.Identifier.Pos())
@@ -164,8 +136,8 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 		slot := v.context.DefineVariable(n.Identifier.Name, n.IsMutable, ValueTypeFromTypeSubkind(n.TypeOf))
 
 		reg := v.nextReg()
-		v.addInstruction(InstrLoadConst(reg, constIndex))
-		v.addInstruction(InstrStoreVar(reg, slot))
+		v.context.AddInstruction(InstrLoadConst(reg, constIndex))
+		v.context.AddInstruction(InstrStoreVar(reg, slot))
 	}
 
 	return nil
@@ -196,7 +168,7 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 			v.addError(fmt.Sprintf("variable %s is of type %s, but assignment is of type %s", n.Identifier.Name, localVar.TypeOf, resultVisitExpr.TypeOf), n.Identifier.Pos())
 			return nil
 		}
-		v.addInstruction(InstrStoreVar(resultVisitExpr.Reg, localVar.Slot))
+		v.context.AddInstruction(InstrStoreVar(resultVisitExpr.Reg, localVar.Slot))
 	} else if upvar != nil {
 		if !upvar.Mutable {
 			v.addError(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
@@ -206,7 +178,7 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 			v.addError(fmt.Sprintf("variable %s is of type %s, but assignment is of type %s", n.Identifier.Name, upvar.TypeOf, resultVisitExpr.TypeOf), n.Identifier.Pos())
 			return nil
 		}
-		v.addInstruction(InstrAssignUpvar(resultVisitExpr.Reg, upvar.LocalSlot))
+		v.context.AddInstruction(InstrAssignUpvar(resultVisitExpr.Reg, upvar.LocalSlot))
 	} else if globalVar != nil {
 		if !globalVar.Mutable {
 			v.addError(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
@@ -217,7 +189,7 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 			return nil
 		}
 
-		v.addInstruction(InstrAssignGlobal(resultVisitExpr.Reg, globalVar.Slot))
+		v.context.AddInstruction(InstrAssignGlobal(resultVisitExpr.Reg, globalVar.Slot))
 	}
 
 	return nil
@@ -229,33 +201,33 @@ func (v *InstructionsVisitor) VisitReturn(n *ast.Return) any {
 	if !ok {
 		return nil
 	}
-	returnType := v.context.returnType
+	returnType := v.context.ReturnType()
 	if resultVisitExpr.TypeOf != returnType {
 		v.addError(fmt.Sprintf("return value must be of type %s, but got %s", returnType, resultVisitExpr.TypeOf), n.Value.Pos())
 		return nil
 	}
-	v.addInstruction(InstrReturn(resultVisitExpr.Reg))
+	v.context.AddInstruction(InstrReturn(resultVisitExpr.Reg))
 	return nil
 }
 
 func (v *InstructionsVisitor) VisitIntLiteral(n *ast.IntLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.context.AddConstant(NewIntValue(n.Value))
-	v.addInstruction(InstrLoadConst(reg, constIndex))
+	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
 	return &VisitExprResult{Reg: reg, TypeOf: VAL_INT}
 }
 
 func (v *InstructionsVisitor) VisitBoolLiteral(n *ast.BoolLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.context.AddConstant(NewBoolValue(n.Value))
-	v.addInstruction(InstrLoadConst(reg, constIndex))
+	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
 	return &VisitExprResult{Reg: reg, TypeOf: VAL_BOOL}
 }
 
 func (v *InstructionsVisitor) VisitNullLiteral(n *ast.NullLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.context.AddConstant(NewNullValue())
-	v.addInstruction(InstrLoadConst(reg, constIndex))
+	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
 	return &VisitExprResult{Reg: reg, TypeOf: VAL_NULL}
 }
 
@@ -273,15 +245,15 @@ func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 	var typeOf ValueType
 	var callable *FuncSignature
 	if localVar != nil {
-		v.addInstruction(InstrLoadVar(reg, localVar.Slot))
+		v.context.AddInstruction(InstrLoadVar(reg, localVar.Slot))
 		typeOf = localVar.TypeOf
 		callable = localVar.FuncSignature
 	} else if upvar != nil {
-		v.addInstruction(InstrLoadUpvar(reg, upvar.LocalSlot))
+		v.context.AddInstruction(InstrLoadUpvar(reg, upvar.LocalSlot))
 		typeOf = upvar.TypeOf
 		callable = upvar.FuncSignature
 	} else if globalVar != nil {
-		v.addInstruction(InstrLoadGlobal(reg, globalVar.Slot))
+		v.context.AddInstruction(InstrLoadGlobal(reg, globalVar.Slot))
 		typeOf = globalVar.TypeOf
 		callable = globalVar.FuncSignature
 	}
@@ -306,7 +278,7 @@ func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
 		return nil
 	}
 	reg := v.nextReg()
-	v.addInstruction(InstrBinary(opInfo.OpCode, reg, leftVisitExpr.Reg, rightVisitExpr.Reg))
+	v.context.AddInstruction(InstrBinary(opInfo.OpCode, reg, leftVisitExpr.Reg, rightVisitExpr.Reg))
 	return &VisitExprResult{Reg: reg, TypeOf: opInfo.ResultType}
 }
 
@@ -332,15 +304,15 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 		statement.Visit(v)
 	}
 
-	params := v.context.params
-	returnType := v.context.returnType
+	params := v.context.Params()
+	returnType := v.context.ReturnType()
 
 	functionSlot := v.exitFunctionContext()
 
 	slot := v.context.DefineFunctionVariable(n.Name, false, VAL_CLOSURE, &FuncSignature{CallArgs: params, ReturnType: returnType})
 	reg := v.nextReg()
-	v.addInstruction(InstrClosure(reg, functionSlot))
-	v.addInstruction(InstrStoreVar(reg, slot))
+	v.context.AddInstruction(InstrClosure(reg, functionSlot))
+	v.context.AddInstruction(InstrStoreVar(reg, slot))
 	return &VisitExprResult{Reg: reg, TypeOf: VAL_CLOSURE}
 }
 
@@ -398,7 +370,7 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 	}
 
 	resultReg := v.nextReg()
-	v.addInstruction(InstrCall(resultReg, resultVisitExpr.Reg, args))
+	v.context.AddInstruction(InstrCall(resultReg, resultVisitExpr.Reg, args))
 	return &VisitExprResult{Reg: resultReg, TypeOf: resultVisitExpr.FuncSignature.ReturnType}
 }
 
@@ -413,25 +385,25 @@ func (v *InstructionsVisitor) VisitIf(n *ast.If) any {
 		return nil
 	}
 	reg := conditionVisitExpr.Reg
-	jumpIfFalseIndex := v.addInstruction(InstrJumpIfFalse(reg, -1))
+	jumpIfFalseIndex := v.context.AddInstruction(InstrJumpIfFalse(reg, -1))
 
 	for _, statement := range n.Body {
 		statement.Visit(v)
 	}
 	elseBodyIndex := -1
 	if len(n.ElseBody) > 0 {
-		elseBodyIndex = v.addInstruction(InstrJump(-1))
+		elseBodyIndex = v.context.AddInstruction(InstrJump(-1))
 	}
-	endIfTarget := v.instructionsLength() - 1
-	v.setInstruction(jumpIfFalseIndex, InstrJumpIfFalse(reg, endIfTarget))
+	endIfTarget := v.context.InstructionsLength() - 1
+	v.context.SetInstruction(jumpIfFalseIndex, InstrJumpIfFalse(reg, endIfTarget))
 
 	for _, statement := range n.ElseBody {
 		statement.Visit(v)
 	}
 
 	if elseBodyIndex != -1 {
-		endElseTarget := v.instructionsLength() - 1
-		v.setInstruction(elseBodyIndex, InstrJump(endElseTarget))
+		endElseTarget := v.context.InstructionsLength() - 1
+		v.context.SetInstruction(elseBodyIndex, InstrJump(endElseTarget))
 	}
 	return nil
 }
