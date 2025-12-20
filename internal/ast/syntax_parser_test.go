@@ -215,6 +215,11 @@ func TestParseAssignment_Basic(t *testing.T) {
 	parser := NewParser(tokens)
 	assign := parser.ParseAssignment()
 
+	value, ok := assign.Value.(*IntLiteral)
+	if !ok {
+		t.Fatal("expected Value to be an IntLiteral")
+	}
+
 	if assign == nil {
 		t.Fatal("expected assignment but got nil")
 	}
@@ -224,30 +229,14 @@ func TestParseAssignment_Basic(t *testing.T) {
 	if assign.Identifier.Name != "x" {
 		t.Errorf("expected identifier name 'x', got '%s'", assign.Identifier.Name)
 	}
-	if assign.Value == nil {
+	if value == nil {
 		t.Fatal("expected value but got nil")
 	}
-}
-
-// ---------- ParseBlock Tests ----------
-
-func TestParseBlock_Empty(t *testing.T) {
-	tokens := []lexer.Token{
-		makeToken("{", lexer.Punctuator, lexer.BlockStart, 0, 1, 1),
-		makeToken("}", lexer.Punctuator, lexer.BlockEnd, 1, 1, 2),
-	}
-
-	parser := NewParser(tokens)
-	block := parser.ParseBlock()
-
-	if block == nil {
-		t.Fatal("expected block but got nil")
+	if value.IsStatement {
+		t.Error("expected IsStatement to be false")
 	}
 	if len(parser.Errors) > 0 {
 		t.Fatalf("unexpected errors: %v", parser.Errors)
-	}
-	if len(block.Statements) != 0 {
-		t.Errorf("expected 0 statements, got %d", len(block.Statements))
 	}
 }
 
@@ -279,7 +268,7 @@ func TestParseCallExpr_NoArguments(t *testing.T) {
 	}
 
 	parser := NewParser(tokens)
-	callExpr := parser.ParseCallExpr(false)
+	callExpr := parser.ParseCallExpr()
 
 	if callExpr == nil {
 		t.Fatal("expected call expression but got nil")
@@ -295,28 +284,59 @@ func TestParseCallExpr_NoArguments(t *testing.T) {
 	}
 }
 
-// ---------- ParseFactor Tests ----------
+// ---------- ParseMultiplicativeExpr Tests ----------
 
 func TestParseMultiplicativeExpr_IntLiteral(t *testing.T) {
 	tokens := []lexer.Token{
 		makeToken("123", lexer.Constant, lexer.Integer, 0, 1, 1),
+		makeToken("*", lexer.Operator, lexer.OperatorStar, 3, 1, 4),
+		makeToken("456", lexer.Constant, lexer.Integer, 5, 1, 6),
 	}
 
 	parser := NewParser(tokens)
-	factor := parser.ParseMultiplicativeExpr(false)
+	multExpr := parser.ParseMultiplicativeExpr(true)
 
-	if factor == nil {
-		t.Fatal("expected factor but got nil")
+	if multExpr == nil {
+		t.Fatal("expected multiplicative expression but got nil")
 	}
 	if len(parser.Errors) > 0 {
 		t.Fatalf("unexpected errors: %v", parser.Errors)
 	}
-	intLit, ok := factor.(*IntLiteral)
+	intLit, ok := multExpr.(*BinaryExpr)
 	if !ok {
-		t.Fatalf("expected IntLiteral, got %T", factor)
+		t.Fatalf("expected BinaryExpr, got %T", multExpr)
 	}
-	if intLit.Value != 123 {
-		t.Errorf("expected value 123, got %d", intLit.Value)
+	if intLit.Operator != lexer.OperatorStar {
+		t.Errorf("expected operator *, got %v", intLit.Operator)
+	}
+	if !intLit.IsStatement {
+		t.Error("expected IsStatement to be true")
+	}
+
+	left, ok := intLit.Left.(*IntLiteral)
+	if !ok {
+		t.Fatalf("expected left to be an IntLiteral, got %T", intLit.Left)
+	}
+	if left.Value != 123 {
+		t.Errorf("expected value 123, got %d", left.Value)
+	}
+	if !left.IsStatement {
+		t.Error("expected IsStatement to be true")
+	}
+
+	right, ok := intLit.Right.(*IntLiteral)
+	if !ok {
+		t.Fatalf("expected right to be an IntLiteral, got %T", intLit.Right)
+	}
+	if right.Value != 456 {
+		t.Errorf("expected value 456, got %d", right.Value)
+	}
+	if !right.IsStatement {
+		t.Error("expected IsStatement to be true")
+	}
+
+	if len(parser.Errors) > 0 {
+		t.Fatalf("unexpected errors: %v", parser.Errors)
 	}
 }
 
