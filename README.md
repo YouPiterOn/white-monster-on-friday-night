@@ -1,46 +1,60 @@
 # white monster on friday night
 
-A custom programming language interpreter written in Go, featuring a complete toolchain from lexing to bytecode execution.
+a custom programming language interpreter written in go, featuring a complete toolchain from lexing to bytecode execution
 
-## Overview
+## overview
 
-white monster on friday night (`.wmofn`) is a virtual machine interpreter that compiles source code to bytecode and executes it. The project implements a full compiler pipeline: lexical analysis, parsing, compilation, and virtual machine execution.
+white monster on friday night (`.wmofn`) is a virtual machine interpreter that compiles source code to bytecode and executes it. the project implements a full compiler pipeline: lexical analysis, parsing, compilation, and virtual machine execution.
 
-## Architecture
+## architecture
 
-The project is organized into several key components:
+the project is organized into several key components:
 
-- **Lexer** (`internal/lexer/`) - Tokenizes source code into a stream of tokens
-- **AST Parser** (`internal/ast/`) - Builds an Abstract Syntax Tree from tokens
-- **Compiler** (`internal/compiler/`) - Generates bytecode instructions from the AST
-- **Virtual Machine** (`internal/vm/`) - Executes bytecode instructions
+- **lexer** (`internal/lexer/`) - tokenizes source code into a stream of tokens
+- **ast parser** (`internal/ast/`) - builds an abstract syntax tree from tokens
+- **compiler** (`internal/compiler/`) - generates bytecode instructions from the ast
+- **virtual machine** (`internal/vm/`) - executes bytecode instructions
 
-## Current Capabilities
+## current capabilities
 
-### Language Features
+### language features
 
-- **Variables and Constants**
+- **variables and constants**
   - `var` declarations for mutable variables
   - `const` declarations for immutable constants
-  - Variable assignment
+  - variable assignment
+  - type annotations (`int`, `bool`, `null`)
 
-- **Scoping**
-  - Block scopes with `{ }`
-  - Local and upvalue (closure) variable access
+- **scoping**
+  - block scopes with `{ }`
+  - local and upvalue (closure) variable access
 
-- **Functions**
-  - Function declarations with parameters
-  - Function calls with arguments
-  - Closures with upvalue capture
-  - Return statements
+- **functions**
+  - function declarations with parameters and return types
+  - function calls with arguments
+  - closures with upvalue capture
+  - return statements
+  - native functions (e.g., `println`)
 
-- **Expressions**
-  - Numeric literals (integers)
-  - Binary operators: `+`, `-`, `*`, `/`
-  - Identifier references
-  - Function call expressions
+- **control flow**
+  - `if/else` statements with conditional expressions
 
-### Example
+- **expressions**
+  - integer literals
+  - boolean literals (`true`, `false`)
+  - null literals
+  - binary operators: `+`, `-`, `*`, `/`, `==`, `!=`, `>`, `>=`, `<`, `<=`, `&&`, `||`
+  - identifier references
+  - function call expressions
+  - statement expression optimization (pure expressions as statements are optimized away)
+
+- **types**
+  - `int` - integer values
+  - `bool` - boolean values
+  - `null` - null value
+  - function types (closures and native functions)
+
+### example
 
 ```javascript
 var a = 20;
@@ -50,28 +64,41 @@ a = 60;
   const b = 123;
 }
 
-const b = 321;
+const b: int = 123;
 
-function addToA(other) {
-  return a + other;
+function addToA(other: int): int {
+  return (a + 0) + other;
 }
 
-return addToA(9);
+function lessThenA(other: int): bool {
+  return other < a;
+}
+
+1 + 1
+
+println(1)
+
+1 + println(1)
+
+if (lessThenA(69)) {
+  return a;
+} else {
+  return addToA(42);
+}
 ```
 
-## Usage
+## usage
 
-Run a `.wmofn` file using the `run` command:
+run a `.wmofn` file using the `run` command:
 
 ```bash
 go run cmd/run/main.go example/helloWorld.wmofn
 ```
 
-## Planned Features
+## planned features
 
-- **Conditional Statements** - add `if/else` statements for control flow
-- **Loops** - implement `for` and `while` loop constructs
-- **Data Types** - add some data types except int and function
-- **Unary Operators** - support unary operators (e.g., `-`, `!`, `++`, `--`)
-- **Ternary Operators** - add conditional expressions (`condition ? true : false`)
-- **VM Improvements & Async** - upgrade the virtual machine with async/await support for concurrent execution
+- **loops** - implement `for` and `while` loop constructs
+- **unary operators** - support unary operators (e.g., `-`, `!`, `++`, `--`)
+- **ternary operators** - add conditional expressions (`condition ? true : false`)
+- **vm improvements & async** - upgrade the virtual machine with async/await support for concurrent execution
+- **embedded interpreter** - compile interpreter to extern-c dll to make it embedable into other projects
