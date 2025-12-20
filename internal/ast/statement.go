@@ -37,6 +37,17 @@ func (a *Assignment) Visit(v Visitor[any]) any {
 	return v.VisitAssignment(a)
 }
 
+type Block struct {
+	Statements []Statement
+	PosAt      *common.SourcePos
+}
+
+func (b *Block) Pos() *common.SourcePos { return b.PosAt }
+func (b *Block) statementNode()         {}
+func (b *Block) Visit(v Visitor[any]) any {
+	return v.VisitBlock(b)
+}
+
 type Return struct {
 	Value Expression
 	PosAt *common.SourcePos

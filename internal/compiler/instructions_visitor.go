@@ -218,6 +218,9 @@ func (v *InstructionsVisitor) VisitReturn(n *ast.Return) any {
 }
 
 func (v *InstructionsVisitor) VisitIntLiteral(n *ast.IntLiteral) any {
+	if n.IsStatement {
+		return nil
+	}
 	reg := v.nextReg()
 	constIndex := v.context.AddConstant(NewIntValue(n.Value))
 	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
@@ -225,6 +228,9 @@ func (v *InstructionsVisitor) VisitIntLiteral(n *ast.IntLiteral) any {
 }
 
 func (v *InstructionsVisitor) VisitBoolLiteral(n *ast.BoolLiteral) any {
+	if n.IsStatement {
+		return nil
+	}
 	reg := v.nextReg()
 	constIndex := v.context.AddConstant(NewBoolValue(n.Value))
 	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
@@ -232,6 +238,9 @@ func (v *InstructionsVisitor) VisitBoolLiteral(n *ast.BoolLiteral) any {
 }
 
 func (v *InstructionsVisitor) VisitNullLiteral(n *ast.NullLiteral) any {
+	if n.IsStatement {
+		return nil
+	}
 	reg := v.nextReg()
 	constIndex := v.context.AddConstant(NewNullValue())
 	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
@@ -239,6 +248,9 @@ func (v *InstructionsVisitor) VisitNullLiteral(n *ast.NullLiteral) any {
 }
 
 func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
+	if n.IsStatement {
+		return nil
+	}
 	var globalVar *Variable
 	localVar, upvar, ok := v.context.FindVariable(n.Name)
 	if !ok {
@@ -269,13 +281,11 @@ func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 
 func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
 	leftResult := n.Left.Visit(v)
-	leftVisitExpr, ok := CastVisitExprResult(leftResult)
-	if !ok {
-		return nil
-	}
+	leftVisitExpr, leftOk := CastVisitExprResult(leftResult)
 	rightResult := n.Right.Visit(v)
-	rightVisitExpr, ok := CastVisitExprResult(rightResult)
-	if !ok {
+	rightVisitExpr, rightOk := CastVisitExprResult(rightResult)
+
+	if !leftOk || !rightOk || n.IsStatement {
 		return nil
 	}
 
