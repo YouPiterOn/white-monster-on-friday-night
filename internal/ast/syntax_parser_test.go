@@ -259,7 +259,7 @@ func TestParseExpression_Identifier(t *testing.T) {
 	}
 
 	parser := NewParser(tokens)
-	expr := parser.ParseExpression()
+	expr := parser.ParseExpression(false)
 
 	if expr == nil {
 		t.Fatal("expected expression but got nil")
@@ -279,7 +279,7 @@ func TestParseCallExpr_NoArguments(t *testing.T) {
 	}
 
 	parser := NewParser(tokens)
-	callExpr := parser.ParseCallExpr()
+	callExpr := parser.ParseCallExpr(false)
 
 	if callExpr == nil {
 		t.Fatal("expected call expression but got nil")
@@ -303,7 +303,7 @@ func TestParseMultiplicativeExpr_IntLiteral(t *testing.T) {
 	}
 
 	parser := NewParser(tokens)
-	factor := parser.ParseMultiplicativeExpr()
+	factor := parser.ParseMultiplicativeExpr(false)
 
 	if factor == nil {
 		t.Fatal("expected factor but got nil")
@@ -328,7 +328,7 @@ func TestParseIntLiteral_Basic(t *testing.T) {
 	}
 
 	parser := NewParser(tokens)
-	lit := parser.ParseIntLiteral()
+	lit := parser.ParseIntLiteral(false)
 
 	if lit == nil {
 		t.Fatal("expected int literal but got nil")
@@ -349,7 +349,7 @@ func TestParseBoolLiteral_True(t *testing.T) {
 	}
 
 	parser := NewParser(tokens)
-	lit := parser.ParseBoolLiteral()
+	lit := parser.ParseBoolLiteral(false)
 
 	if lit == nil {
 		t.Fatal("expected bool literal but got nil")
@@ -370,7 +370,7 @@ func TestParseNullLiteral_Basic(t *testing.T) {
 	}
 
 	parser := NewParser(tokens)
-	lit := parser.ParseNullLiteral()
+	lit := parser.ParseNullLiteral(false)
 
 	if lit == nil {
 		t.Fatal("expected null literal but got nil")
@@ -388,7 +388,7 @@ func TestParseIdentifier_Basic(t *testing.T) {
 	}
 
 	parser := NewParser(tokens)
-	id := parser.ParseIdentifier()
+	id := parser.ParseIdentifier(false)
 
 	if id == nil {
 		t.Fatal("expected identifier but got nil")

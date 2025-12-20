@@ -105,7 +105,7 @@ func (p *Parser) ParseStatement() Statement {
 		return p.ParseIf()
 	}
 
-	expression := p.ParseExpression()
+	expression := p.ParseExpression(true)
 	if expression == nil {
 		p.addError(fmt.Sprintf("expected statement but got %v(%v)", t.Kind, t.Subkind), t.Pos)
 		return nil
@@ -236,7 +236,7 @@ func (p *Parser) ParseReturn() Statement {
 		return nil
 	}
 
-	value := p.ParseExpression()
+	value := p.ParseExpression(false)
 
 	semicolon := p.eatExpected(lexer.Punctuator, lexer.StatementEnd, "expected ';'")
 	if semicolon == nil {
@@ -284,7 +284,7 @@ func (p *Parser) ParseDeclaration() *Declaration {
 	var value Expression = nil
 	if eqTok != nil && eqTok.Kind == lexer.Punctuator && eqTok.Subkind == lexer.Assign {
 		p.eat()
-		value = p.ParseExpression()
+		value = p.ParseExpression(false)
 		if value == nil {
 			return nil
 		}
@@ -316,7 +316,7 @@ func (p *Parser) ParseAssignment() *Assignment {
 		return nil
 	}
 
-	value := p.ParseExpression()
+	value := p.ParseExpression(false)
 	if value == nil {
 		return nil
 	}
@@ -342,7 +342,7 @@ func (p *Parser) ParseIf() *If {
 	if lparen == nil {
 		return nil
 	}
-	condition := p.ParseExpression()
+	condition := p.ParseExpression(false)
 	if condition == nil {
 		return nil
 	}
@@ -363,12 +363,12 @@ func (p *Parser) ParseIf() *If {
 	return &If{Condition: condition, Body: body, ElseBody: elseBody, PosAt: kw.Pos}
 }
 
-func (p *Parser) ParseExpression() Expression {
-	return p.ParseLogicalOrExpr()
+func (p *Parser) ParseExpression(isStatement bool) Expression {
+	return p.ParseLogicalOrExpr(isStatement)
 }
 
-func (p *Parser) ParseLogicalOrExpr() Expression {
-	left := p.ParseLogicalAndExpr()
+func (p *Parser) ParseLogicalOrExpr(isStatement bool) Expression {
+	left := p.ParseLogicalAndExpr(isStatement)
 	if left == nil {
 		return nil
 	}
@@ -380,19 +380,19 @@ func (p *Parser) ParseLogicalOrExpr() Expression {
 		}
 
 		p.eat()
-		right := p.ParseLogicalAndExpr()
+		right := p.ParseLogicalAndExpr(isStatement)
 		if right == nil {
 			return nil
 		}
 
-		left = &BinaryExpr{Left: left, Operator: lexer.OperatorOr, Right: right}
+		left = &BinaryExpr{Left: left, Operator: lexer.OperatorOr, Right: right, IsStatement: isStatement}
 	}
 
 	return left
 }
 
-func (p *Parser) ParseLogicalAndExpr() Expression {
-	left := p.ParseEqualityExpr()
+func (p *Parser) ParseLogicalAndExpr(isStatement bool) Expression {
+	left := p.ParseEqualityExpr(isStatement)
 	if left == nil {
 		return nil
 	}
@@ -404,19 +404,25 @@ func (p *Parser) ParseLogicalAndExpr() Expression {
 		}
 
 		p.eat()
-		right := p.ParseEqualityExpr()
+		right := p.ParseEqualityExpr(isStatement)
 		if right == nil {
 			return nil
 		}
 
-		left = &BinaryExpr{Left: left, Operator: lexer.OperatorAnd, Right: right}
+		left = &BinaryExpr{
+			Left:        left,
+			Operator:    lexer.OperatorAnd,
+			Right:       right,
+			PosAt:       op.Pos,
+			IsStatement: isStatement,
+		}
 	}
 
 	return left
 }
 
-func (p *Parser) ParseEqualityExpr() Expression {
-	left := p.ParseComparisonExpr()
+func (p *Parser) ParseEqualityExpr(isStatement bool) Expression {
+	left := p.ParseComparisonExpr(isStatement)
 	if left == nil {
 		return nil
 	}
@@ -430,19 +436,25 @@ func (p *Parser) ParseEqualityExpr() Expression {
 		}
 
 		p.eat()
-		right := p.ParseComparisonExpr()
+		right := p.ParseComparisonExpr(isStatement)
 		if right == nil {
 			return nil
 		}
 
-		left = &BinaryExpr{Left: left, Operator: op.Subkind.(lexer.OperatorSubkind), Right: right}
+		left = &BinaryExpr{
+			Left:        left,
+			Operator:    op.Subkind.(lexer.OperatorSubkind),
+			Right:       right,
+			PosAt:       op.Pos,
+			IsStatement: isStatement,
+		}
 	}
 
 	return left
 }
 
-func (p *Parser) ParseComparisonExpr() Expression {
-	left := p.ParseAdditiveExpr()
+func (p *Parser) ParseComparisonExpr(isStatement bool) Expression {
+	left := p.ParseAdditiveExpr(isStatement)
 	if left == nil {
 		return nil
 	}
@@ -458,19 +470,25 @@ func (p *Parser) ParseComparisonExpr() Expression {
 		}
 
 		p.eat()
-		right := p.ParseAdditiveExpr()
+		right := p.ParseAdditiveExpr(isStatement)
 		if right == nil {
 			return nil
 		}
 
-		left = &BinaryExpr{Left: left, Operator: op.Subkind.(lexer.OperatorSubkind), Right: right}
+		left = &BinaryExpr{
+			Left:        left,
+			Operator:    op.Subkind.(lexer.OperatorSubkind),
+			Right:       right,
+			PosAt:       op.Pos,
+			IsStatement: isStatement,
+		}
 	}
 
 	return left
 }
 
-func (p *Parser) ParseAdditiveExpr() Expression {
-	left := p.ParseMultiplicativeExpr()
+func (p *Parser) ParseAdditiveExpr(isStatement bool) Expression {
+	left := p.ParseMultiplicativeExpr(isStatement)
 	if left == nil {
 		return nil
 	}
@@ -483,24 +501,25 @@ func (p *Parser) ParseAdditiveExpr() Expression {
 		}
 
 		p.eat()
-		right := p.ParseMultiplicativeExpr()
+		right := p.ParseMultiplicativeExpr(isStatement)
 		if right == nil {
 			return nil
 		}
 
 		left = &BinaryExpr{
-			Left:     left,
-			Operator: op.Subkind.(lexer.OperatorSubkind),
-			Right:    right,
-			PosAt:    op.Pos,
+			Left:        left,
+			Operator:    op.Subkind.(lexer.OperatorSubkind),
+			Right:       right,
+			PosAt:       op.Pos,
+			IsStatement: isStatement,
 		}
 	}
 
 	return left
 }
 
-func (p *Parser) ParseMultiplicativeExpr() Expression {
-	left := p.ParsePrimaryExpr()
+func (p *Parser) ParseMultiplicativeExpr(isStatement bool) Expression {
+	left := p.ParsePrimaryExpr(isStatement)
 	if left == nil {
 		return nil
 	}
@@ -513,29 +532,30 @@ func (p *Parser) ParseMultiplicativeExpr() Expression {
 		}
 
 		p.eat()
-		right := p.ParsePrimaryExpr()
+		right := p.ParsePrimaryExpr(isStatement)
 		if right == nil {
 			return nil
 		}
 
 		left = &BinaryExpr{
-			Left:     left,
-			Operator: op.Subkind.(lexer.OperatorSubkind),
-			Right:    right,
-			PosAt:    op.Pos,
+			Left:        left,
+			Operator:    op.Subkind.(lexer.OperatorSubkind),
+			Right:       right,
+			PosAt:       op.Pos,
+			IsStatement: isStatement,
 		}
 	}
 
 	return left
 }
 
-func (p *Parser) ParsePrimaryExpr() Expression {
+func (p *Parser) ParsePrimaryExpr(isStatement bool) Expression {
 	tok := p.peek(0)
 
 	if tok.Kind == lexer.Punctuator && tok.Subkind == lexer.ParenOpen {
 		p.eat()
 
-		expr := p.ParseExpression()
+		expr := p.ParseExpression(isStatement)
 		if expr == nil {
 			return nil
 		}
@@ -548,33 +568,33 @@ func (p *Parser) ParsePrimaryExpr() Expression {
 		return expr
 	}
 
-	return p.ParseAtomExpr()
+	return p.ParseAtomExpr(isStatement)
 }
 
-func (p *Parser) ParseAtomExpr() Expression {
+func (p *Parser) ParseAtomExpr(isStatement bool) Expression {
 	t := p.peek(0)
 	if t == nil {
 		return nil
 	}
 
 	if t.Kind == lexer.Constant && t.Subkind == lexer.Integer {
-		return p.ParseIntLiteral()
+		return p.ParseIntLiteral(isStatement)
 	}
 
 	if t.Kind == lexer.Constant && t.Subkind == lexer.Boolean {
-		return p.ParseBoolLiteral()
+		return p.ParseBoolLiteral(isStatement)
 	}
 
 	if t.Kind == lexer.Constant && t.Subkind == lexer.Null {
-		return p.ParseNullLiteral()
+		return p.ParseNullLiteral(isStatement)
 	}
 
 	if t.Kind == lexer.Identifier {
 		lparen := p.peek(1)
 		if lparen != nil && lparen.Kind == lexer.Punctuator && lparen.Subkind == lexer.ParenOpen {
-			return p.ParseCallExpr()
+			return p.ParseCallExpr(isStatement)
 		}
-		return p.ParseIdentifier()
+		return p.ParseIdentifier(isStatement)
 	}
 
 	return nil
@@ -582,19 +602,20 @@ func (p *Parser) ParseAtomExpr() Expression {
 
 // ---------- Atoms ----------
 
-func (p *Parser) ParseIntLiteral() *IntLiteral {
+func (p *Parser) ParseIntLiteral(isStatement bool) *IntLiteral {
 	t := p.eat()
 	if t == nil {
 		return nil
 	}
 
 	return &IntLiteral{
-		Value: atoi(t.Lexeme),
-		PosAt: t.Pos,
+		Value:       atoi(t.Lexeme),
+		PosAt:       t.Pos,
+		IsStatement: isStatement,
 	}
 }
 
-func (p *Parser) ParseBoolLiteral() *BoolLiteral {
+func (p *Parser) ParseBoolLiteral(isStatement bool) *BoolLiteral {
 	t := p.eat()
 	if t == nil {
 		return nil
@@ -605,10 +626,10 @@ func (p *Parser) ParseBoolLiteral() *BoolLiteral {
 		return nil
 	}
 
-	return &BoolLiteral{Value: t.Lexeme == "true", PosAt: t.Pos}
+	return &BoolLiteral{Value: t.Lexeme == "true", PosAt: t.Pos, IsStatement: isStatement}
 }
 
-func (p *Parser) ParseNullLiteral() *NullLiteral {
+func (p *Parser) ParseNullLiteral(isStatement bool) *NullLiteral {
 	t := p.eat()
 	if t == nil {
 		return nil
@@ -619,20 +640,20 @@ func (p *Parser) ParseNullLiteral() *NullLiteral {
 		return nil
 	}
 
-	return &NullLiteral{PosAt: t.Pos}
+	return &NullLiteral{PosAt: t.Pos, IsStatement: isStatement}
 }
 
-func (p *Parser) ParseIdentifier() *Identifier {
+func (p *Parser) ParseIdentifier(isStatement bool) *Identifier {
 	idTok := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
 	if idTok == nil {
 		return nil
 	}
 
-	return &Identifier{Name: idTok.Lexeme, PosAt: idTok.Pos}
+	return &Identifier{Name: idTok.Lexeme, PosAt: idTok.Pos, IsStatement: isStatement}
 }
 
-func (p *Parser) ParseCallExpr() *CallExpr {
-	identifier := p.ParseIdentifier()
+func (p *Parser) ParseCallExpr(isStatement bool) *CallExpr {
+	identifier := p.ParseIdentifier(isStatement)
 	if identifier == nil {
 		return nil
 	}
@@ -646,10 +667,10 @@ func (p *Parser) ParseCallExpr() *CallExpr {
 		return nil
 	}
 	if t.Kind == lexer.Punctuator && t.Subkind == lexer.ParenClose {
-		return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
+		return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos, IsStatement: isStatement}
 	}
 	for {
-		argument := p.ParseExpression()
+		argument := p.ParseExpression(isStatement)
 		if argument == nil {
 			break
 		}
@@ -664,7 +685,7 @@ func (p *Parser) ParseCallExpr() *CallExpr {
 	if rparen == nil {
 		return nil
 	}
-	return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
+	return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos, IsStatement: isStatement}
 }
 
 func atoi(s string) int {

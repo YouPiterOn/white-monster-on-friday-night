@@ -11,8 +11,9 @@ type Expression interface {
 }
 
 type IntLiteral struct {
-	Value int
-	PosAt *common.SourcePos
+	Value       int
+	PosAt       *common.SourcePos
+	IsStatement bool
 }
 
 func (n *IntLiteral) Pos() *common.SourcePos { return n.PosAt }
@@ -23,8 +24,9 @@ func (n *IntLiteral) Visit(v Visitor[any]) any {
 }
 
 type BoolLiteral struct {
-	Value bool
-	PosAt *common.SourcePos
+	Value       bool
+	PosAt       *common.SourcePos
+	IsStatement bool
 }
 
 func (b *BoolLiteral) Pos() *common.SourcePos { return b.PosAt }
@@ -35,7 +37,8 @@ func (b *BoolLiteral) Visit(v Visitor[any]) any {
 }
 
 type NullLiteral struct {
-	PosAt *common.SourcePos
+	PosAt       *common.SourcePos
+	IsStatement bool
 }
 
 func (n *NullLiteral) Pos() *common.SourcePos { return n.PosAt }
@@ -46,8 +49,9 @@ func (n *NullLiteral) Visit(v Visitor[any]) any {
 }
 
 type Identifier struct {
-	Name  string
-	PosAt *common.SourcePos
+	Name        string
+	PosAt       *common.SourcePos
+	IsStatement bool
 }
 
 func (i *Identifier) Pos() *common.SourcePos { return i.PosAt }
@@ -58,10 +62,11 @@ func (i *Identifier) Visit(v Visitor[any]) any {
 }
 
 type BinaryExpr struct {
-	Left     Expression
-	Operator lexer.OperatorSubkind
-	Right    Expression
-	PosAt    *common.SourcePos
+	Left        Expression
+	Operator    lexer.OperatorSubkind
+	Right       Expression
+	PosAt       *common.SourcePos
+	IsStatement bool
 }
 
 func (b *BinaryExpr) Pos() *common.SourcePos { return b.PosAt }
@@ -72,9 +77,10 @@ func (b *BinaryExpr) Visit(v Visitor[any]) any {
 }
 
 type CallExpr struct {
-	Identifier Identifier
-	Arguments  []Expression
-	PosAt      *common.SourcePos
+	Identifier  Identifier
+	Arguments   []Expression
+	PosAt       *common.SourcePos
+	IsStatement bool
 }
 
 func (c *CallExpr) Pos() *common.SourcePos { return c.PosAt }
@@ -82,16 +88,4 @@ func (c *CallExpr) statementNode()         {}
 func (c *CallExpr) expressionNode()        {}
 func (c *CallExpr) Visit(v Visitor[any]) any {
 	return v.VisitCallExpr(c)
-}
-
-type Block struct {
-	Statements []Statement
-	PosAt      *common.SourcePos
-}
-
-func (b *Block) Pos() *common.SourcePos { return b.PosAt }
-func (b *Block) statementNode()         {}
-func (b *Block) expressionNode()        {}
-func (b *Block) Visit(v Visitor[any]) any {
-	return v.VisitBlock(b)
 }
