@@ -592,7 +592,7 @@ func (p *Parser) ParseAtomExpr(isStatement bool) Expression {
 	if t.Kind == lexer.Identifier {
 		lparen := p.peek(1)
 		if lparen != nil && lparen.Kind == lexer.Punctuator && lparen.Subkind == lexer.ParenOpen {
-			return p.ParseCallExpr(isStatement)
+			return p.ParseCallExpr()
 		}
 		return p.ParseIdentifier(isStatement)
 	}
@@ -652,8 +652,8 @@ func (p *Parser) ParseIdentifier(isStatement bool) *Identifier {
 	return &Identifier{Name: idTok.Lexeme, PosAt: idTok.Pos, IsStatement: isStatement}
 }
 
-func (p *Parser) ParseCallExpr(isStatement bool) *CallExpr {
-	identifier := p.ParseIdentifier(isStatement)
+func (p *Parser) ParseCallExpr() *CallExpr {
+	identifier := p.ParseIdentifier(false)
 	if identifier == nil {
 		return nil
 	}
@@ -667,10 +667,10 @@ func (p *Parser) ParseCallExpr(isStatement bool) *CallExpr {
 		return nil
 	}
 	if t.Kind == lexer.Punctuator && t.Subkind == lexer.ParenClose {
-		return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos, IsStatement: isStatement}
+		return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
 	}
 	for {
-		argument := p.ParseExpression(isStatement)
+		argument := p.ParseExpression(false)
 		if argument == nil {
 			break
 		}
@@ -685,7 +685,7 @@ func (p *Parser) ParseCallExpr(isStatement bool) *CallExpr {
 	if rparen == nil {
 		return nil
 	}
-	return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos, IsStatement: isStatement}
+	return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
 }
 
 func atoi(s string) int {
