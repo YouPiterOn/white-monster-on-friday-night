@@ -43,12 +43,11 @@ func (m *ModuleProto) Functions() []FunctionProto {
 	return m.functions
 }
 
-func BuildModuleProto(context Context, functions []FunctionProto) *ModuleProto {
-	moduleContext := CastModuleContext(context)
+func BuildModuleProto(context ModuleContext, functions []FunctionProto) *ModuleProto {
 	return &ModuleProto{
-		numLocals:    moduleContext.currentVarSlot,
-		instructions: moduleContext.instructions,
-		constants:    moduleContext.constants,
+		numLocals:    context.currentVarSlot,
+		instructions: context.instructions,
+		constants:    context.constants,
 		functions:    functions,
 	}
 }

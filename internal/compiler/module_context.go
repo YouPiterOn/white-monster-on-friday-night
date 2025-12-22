@@ -64,6 +64,10 @@ func (c *ModuleContext) AddInstruction(instruction Instruction) int {
 	return len(c.instructions) - 1
 }
 
+func (c *ModuleContext) ClearInstructions() {
+	c.instructions = make([]Instruction, 0)
+}
+
 func (c *ModuleContext) SetInstruction(index int, instruction Instruction) {
 	c.instructions[index] = instruction
 }
