@@ -44,6 +44,25 @@ func NewInstructionsVisitor() *InstructionsVisitor {
 
 // ---------- Helpers ----------
 
+func (v *InstructionsVisitor) EnterModuleContext() {
+	v.context = NewModuleContext()
+}
+
+func (v *InstructionsVisitor) ExitModuleContext() {
+	moduleContext := CastModuleContext(v.context)
+	moduleProto := BuildModuleProto(*moduleContext, v.functionProtos)
+	v.moduleProtos = append(v.moduleProtos, *moduleProto)
+	v.context = nil
+	v.functionProtos = []FunctionProto{}
+}
+
+func (v *InstructionsVisitor) EmitModuleProto() *ModuleProto {
+	moduleContext := CastModuleContext(v.context)
+	moduleProto := BuildModuleProto(*moduleContext, v.functionProtos)
+	moduleContext.ClearInstructions()
+	return moduleProto
+}
+
 func (v *InstructionsVisitor) addError(message string, pos *common.SourcePos) {
 	v.errors = append(v.errors, common.Error{Message: message, Pos: pos})
 }
@@ -62,17 +81,6 @@ func (v *InstructionsVisitor) resetReg() int {
 	reg := v.reg
 	v.reg = 0
 	return reg
-}
-
-func (v *InstructionsVisitor) enterModuleContext() {
-	v.context = NewModuleContext()
-}
-
-func (v *InstructionsVisitor) exitModuleContext() {
-	moduleProto := BuildModuleProto(v.context, v.functionProtos)
-	v.moduleProtos = append(v.moduleProtos, *moduleProto)
-	v.context = nil
-	v.functionProtos = []FunctionProto{}
 }
 
 func (v *InstructionsVisitor) enterFunctionContext(returnType ValueType) {
@@ -97,12 +105,10 @@ func (v *InstructionsVisitor) exitBlockContext() {
 // ---------- Visitor Implementations ----------
 
 func (v *InstructionsVisitor) VisitProgram(n *ast.Program) any {
-	v.enterModuleContext()
 	for _, statement := range n.Statements {
 		statement.Visit(v)
 		v.resetReg()
 	}
-	v.exitModuleContext()
 	return nil
 }
 

@@ -8,24 +8,28 @@ import (
 )
 
 type VM struct {
-	frames      []Frame
-	moduleProto compiler.ModuleProto
-	globals     []compiler.Value
+	frames         []Frame
+	moduleInstance *ModuleInstance
+	globals        []compiler.Value
 }
 
 func (v *VM) ImplementVMInterface() {}
 
-func NewVM(moduleProto compiler.ModuleProto, gt *compiler.GlobalTable) *VM {
-	vm := &VM{frames: make([]Frame, 0), moduleProto: moduleProto, globals: make([]compiler.Value, gt.Length())}
+func NewVM(gt *compiler.GlobalTable) *VM {
+	vm := &VM{frames: make([]Frame, 0), moduleInstance: nil, globals: make([]compiler.Value, gt.Length())}
 	vm.initStdlibValues(gt)
 	return vm
 }
 
-func (v *VM) Run() int {
-	closure := compiler.NewClosure(&v.moduleProto)
-	frame := NewFrame(closure)
-	v.frames = append(v.frames, *frame)
-	retval := v.runInstructions(v.moduleProto.Instructions())
+func (v *VM) RunModuleProto(moduleProto *compiler.ModuleProto) int {
+	v.moduleInstance = NewModuleInstance(moduleProto)
+	if len(v.frames) == 0 {
+		frame := NewFrame(moduleProto, make([]*compiler.UpvalueCell, 0))
+		v.frames = append(v.frames, *frame)
+	} else {
+		v.currentFrame().SetConstants(moduleProto.Constants())
+	}
+	retval := v.runInstructions(moduleProto.Instructions())
 	if retval == nil {
 		return 0
 	}
@@ -33,7 +37,7 @@ func (v *VM) Run() int {
 }
 
 func (v *VM) initStdlibValues(gt *compiler.GlobalTable) {
-	// print
+	// println
 	if variable, ok := gt.FindVariable("println"); ok {
 		v.globals[variable.Slot] = compiler.Value{
 			TypeOf: compiler.VAL_NATIVE_FUNCTION,
@@ -109,8 +113,12 @@ func (v *VM) runInstructions(instructions []compiler.Instruction) *compiler.Valu
 		}
 		frame.AdvanceIp()
 	}
-	retval := v.currentFrame().retval
-	v.frames = v.frames[:len(v.frames)-1]
+	var retval *compiler.Value = &compiler.Value{TypeOf: compiler.VAL_NULL}
+	if v.currentFrame().retval != nil {
+		*retval = *v.currentFrame().retval
+		v.currentFrame().retval = nil
+	}
+	v.currentFrame().SetIp(0)
 	return retval
 }
 
@@ -248,7 +256,7 @@ func (v *VM) opOrBool(args []int) {
 }
 
 func (v *VM) opClosure(args []int) {
-	proto := v.moduleProto.Functions()[args[1]]
+	proto := v.moduleInstance.functions[args[1]]
 	closure := &compiler.Closure{Proto: &proto, Upvalues: make([]*compiler.UpvalueCell, len(proto.Upvars()))}
 	for i, upvar := range proto.Upvars() {
 		if upvar.IsFromParent {
@@ -266,7 +274,7 @@ func (v *VM) opCall(args []int) {
 	funcArgs := args[2:]
 	switch function.TypeOf {
 	case compiler.VAL_CLOSURE:
-		frame := NewFrame(&function.Closure)
+		frame := NewFrame(function.Closure.Proto, function.Closure.Upvalues)
 		for i, argument := range funcArgs {
 			value := v.currentFrame().GetRegister(argument)
 			frame.SetLocal(i, *value)
@@ -274,6 +282,7 @@ func (v *VM) opCall(args []int) {
 		v.frames = append(v.frames, *frame)
 		functionProto := function.Closure.Proto
 		retval := v.runInstructions(functionProto.Instructions())
+		v.frames = v.frames[:len(v.frames)-1]
 		v.currentFrame().SetRegister(args[0], *retval)
 		return
 	case compiler.VAL_NATIVE_FUNCTION:

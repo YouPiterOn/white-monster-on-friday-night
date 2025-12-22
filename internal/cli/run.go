@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -10,14 +10,7 @@ import (
 	"youpiteron.dev/white-monster-on-friday-night/internal/vm"
 )
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("usage: run <file>")
-		os.Exit(1)
-	}
-
-	path := os.Args[1]
-
+func Run(path string) {
 	buffer, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Printf("failed to read file %s: %v\n", path, err)
@@ -50,9 +43,9 @@ func main() {
 	}
 
 	compiler := compiler.NewCompiler()
-	compileResult := compiler.Compile(program)
+	compileResult := compiler.CompileToModuleProto(program)
 
-	vm := vm.NewVM(compileResult.ModuleProto, compileResult.GlobalTable)
-	retval := vm.Run()
+	vm := vm.NewVM(compileResult.GlobalTable)
+	retval := vm.RunModuleProto(&compileResult.ModuleProto)
 	fmt.Printf("retval: %d\n", retval)
 }

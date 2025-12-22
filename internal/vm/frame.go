@@ -3,15 +3,16 @@ package vm
 import "youpiteron.dev/white-monster-on-friday-night/internal/compiler"
 
 type Frame struct {
-	closure   *compiler.Closure
+	constants []compiler.Value
+	upvalues  []*compiler.UpvalueCell
 	locals    []compiler.Value
 	registers []compiler.Value
 	ip        int
 	retval    *compiler.Value
 }
 
-func NewFrame(closure *compiler.Closure) *Frame {
-	return &Frame{closure: closure, locals: make([]compiler.Value, closure.Proto.NumLocals()), registers: make([]compiler.Value, 0), ip: 0, retval: nil}
+func NewFrame(proto compiler.Proto, upvalues []*compiler.UpvalueCell) *Frame {
+	return &Frame{constants: proto.Constants(), upvalues: upvalues, locals: make([]compiler.Value, proto.NumLocals()), registers: make([]compiler.Value, 0), ip: 0, retval: nil}
 }
 
 func (f *Frame) GetLocal(slot int) *compiler.Value {
@@ -23,10 +24,10 @@ func (f *Frame) GetRegister(slot int) *compiler.Value {
 }
 
 func (f *Frame) GetUpvar(slot int) *compiler.Value {
-	if slot >= len(f.closure.Upvalues) {
+	if slot >= len(f.upvalues) {
 		panic("VM ERROR: upvar slot out of bounds")
 	}
-	return f.closure.Upvalues[slot].Ptr
+	return f.upvalues[slot].Ptr
 }
 
 func (f *Frame) SetLocal(slot int, value compiler.Value) {
@@ -48,11 +49,15 @@ func (f *Frame) SetRegister(slot int, value compiler.Value) {
 }
 
 func (f *Frame) SetUpvar(slot int, value compiler.Value) {
-	*f.closure.Upvalues[slot].Ptr = value
+	*f.upvalues[slot].Ptr = value
+}
+
+func (f *Frame) SetConstants(constants []compiler.Value) {
+	f.constants = constants
 }
 
 func (f *Frame) GetConstant(index int) compiler.Value {
-	return f.closure.Proto.Constants()[index]
+	return f.constants[index]
 }
 
 func (f *Frame) AdvanceIp() {

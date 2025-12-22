@@ -62,7 +62,7 @@ func TestVisitBinaryExpr_StatementExpression_Optimized(t *testing.T) {
 	binaryExpr := makeBinaryExpr(left, lexer.OperatorPlus, right, true, 2, 1, 3)
 
 	visitor := NewInstructionsVisitor()
-	visitor.enterModuleContext()
+	visitor.EnterModuleContext()
 
 	binaryExpr.Visit(visitor)
 
@@ -90,7 +90,7 @@ func TestVisitCallExpr_StatementExpression_NotOptimized(t *testing.T) {
 	callExpr := makeCallExpr(identifier, []ast.Expression{arg}, 7, 1, 8)
 
 	visitor := NewInstructionsVisitor()
-	visitor.enterModuleContext()
+	visitor.EnterModuleContext()
 
 	callExpr.Visit(visitor)
 
@@ -132,7 +132,7 @@ func TestVisitBinaryExpr_StatementExpression_WithSideEffects(t *testing.T) {
 	binaryExpr := makeBinaryExpr(left, lexer.OperatorPlus, callExpr, true, 2, 1, 3)
 
 	visitor := NewInstructionsVisitor()
-	visitor.enterModuleContext()
+	visitor.EnterModuleContext()
 
 	binaryExpr.Visit(visitor)
 
@@ -169,7 +169,7 @@ func TestVisitIntLiteral_StatementExpression_Optimized(t *testing.T) {
 	intLiteral := makeIntLiteral(42, true, 0, 1, 1)
 
 	visitor := NewInstructionsVisitor()
-	visitor.enterModuleContext()
+	visitor.EnterModuleContext()
 
 	result := intLiteral.Visit(visitor)
 
@@ -196,7 +196,7 @@ func TestVisitIntLiteral_Expression_NotOptimized(t *testing.T) {
 	intLiteral := makeIntLiteral(42, false, 0, 1, 1)
 
 	visitor := NewInstructionsVisitor()
-	visitor.enterModuleContext()
+	visitor.EnterModuleContext()
 
 	result := intLiteral.Visit(visitor)
 
