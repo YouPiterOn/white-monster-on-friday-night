@@ -64,6 +64,5 @@ func (c *Compiler) CompileREPLChunk(program *ast.Program) *CompileResult {
 		os.Exit(1)
 	}
 	moduleProto := c.instructionsVisitor.EmitModuleProto()
-	fmt.Printf("module proto: %s\n", moduleProto.String())
 	return &CompileResult{ModuleProto: *moduleProto, GlobalTable: c.instructionsVisitor.globalTable}
 }

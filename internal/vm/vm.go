@@ -30,7 +30,6 @@ func (v *VM) RunModuleProto(moduleProto *compiler.ModuleProto) int {
 		v.currentFrame().SetConstants(moduleProto.Constants())
 	}
 	retval := v.runInstructions(moduleProto.Instructions())
-	fmt.Printf("retval: %v\n", retval)
 	if retval == nil {
 		return 0
 	}
@@ -58,7 +57,6 @@ func (v *VM) runInstructions(instructions []compiler.Instruction) *compiler.Valu
 			break
 		}
 		instruction := instructions[frame.ip]
-		fmt.Printf("instruction: %v\n", instruction)
 		switch instruction.OpCode {
 		case compiler.LOAD_CONST:
 			v.opLoadConst(instruction.Args)
@@ -303,7 +301,6 @@ func (v *VM) opCall(args []int) {
 
 func (v *VM) opReturn(args []int) {
 	val := v.currentFrame().GetRegister(args[0])
-	fmt.Printf("opReturn: %v\n", val)
 	v.currentFrame().SetRetval(val)
 }
 
