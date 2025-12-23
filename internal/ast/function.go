@@ -19,6 +19,7 @@ func (p *Param) Visit(v Visitor[any]) any {
 type Function struct {
 	Name       string
 	Params     []Param
+	Vararg     bool
 	Body       []Statement
 	ReturnType lexer.TypeSubkind
 	PosAt      *common.SourcePos

@@ -427,11 +427,11 @@ func isIdentContinue(ch byte) bool {
 }
 
 func isOperatorStart(ch byte) bool {
-	return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '=' || ch == '!' || ch == '>' || ch == '<' || ch == '&' || ch == '|'
+	return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '=' || ch == '!' || ch == '>' || ch == '<' || ch == '&' || ch == '|' || ch == '.'
 }
 
 func isOperatorContinue(ch byte) bool {
-	return ch == '=' || ch == '&' || ch == '|'
+	return ch == '=' || ch == '&' || ch == '|' || ch == '.'
 }
 
 func operatorSubkind(lex string) (OperatorSubkind, bool) {
@@ -460,6 +460,8 @@ func operatorSubkind(lex string) (OperatorSubkind, bool) {
 		return OperatorAnd, true
 	case "||":
 		return OperatorOr, true
+	case "...":
+		return OperatorRest, true
 	default:
 		return 0, false
 	}
