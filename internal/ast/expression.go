@@ -48,6 +48,19 @@ func (n *NullLiteral) Visit(v Visitor[any]) any {
 	return v.VisitNullLiteral(n)
 }
 
+type ArrayLiteral struct {
+	Elements    []Expression
+	PosAt       *common.SourcePos
+	IsStatement bool
+}
+
+func (a *ArrayLiteral) Pos() *common.SourcePos { return a.PosAt }
+func (a *ArrayLiteral) statementNode()         {}
+func (a *ArrayLiteral) expressionNode()        {}
+func (a *ArrayLiteral) Visit(v Visitor[any]) any {
+	return v.VisitArrayLiteral(a)
+}
+
 type Identifier struct {
 	Name        string
 	PosAt       *common.SourcePos
@@ -87,4 +100,18 @@ func (c *CallExpr) statementNode()         {}
 func (c *CallExpr) expressionNode()        {}
 func (c *CallExpr) Visit(v Visitor[any]) any {
 	return v.VisitCallExpr(c)
+}
+
+type IndexExpr struct {
+	Array       Expression
+	Index       Expression
+	PosAt       *common.SourcePos
+	IsStatement bool
+}
+
+func (i *IndexExpr) Pos() *common.SourcePos { return i.PosAt }
+func (i *IndexExpr) statementNode()         {}
+func (i *IndexExpr) expressionNode()        {}
+func (i *IndexExpr) Visit(v Visitor[any]) any {
+	return v.VisitIndexExpr(i)
 }

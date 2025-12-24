@@ -55,92 +55,14 @@ func (l *Lexer) Lex(input string) LexResult {
 				continue
 			}
 
-			// punctuator ';'
-			if ch == ';' {
+			// punctuator
+			if subkind, ok := punctuatorSubkind(ch); ok {
 				pos := l.posSpan(1)
 				l.next()
 				tokens = append(tokens, Token{
-					Lexeme:  ";",
+					Lexeme:  string(ch),
 					Kind:    Punctuator,
-					Subkind: StatementEnd,
-					Pos:     &pos,
-				})
-				continue
-			}
-
-			// punctuator ','
-			if ch == ',' {
-				pos := l.posSpan(1)
-				l.next()
-				tokens = append(tokens, Token{
-					Lexeme:  ",",
-					Kind:    Punctuator,
-					Subkind: Comma,
-					Pos:     &pos,
-				})
-				continue
-			}
-
-			// punctuator '{'
-			if ch == '{' {
-				pos := l.posSpan(1)
-				l.next()
-				tokens = append(tokens, Token{
-					Lexeme:  "{",
-					Kind:    Punctuator,
-					Subkind: BlockStart,
-					Pos:     &pos,
-				})
-				continue
-			}
-
-			// punctuator '}'
-			if ch == '}' {
-				pos := l.posSpan(1)
-				l.next()
-				tokens = append(tokens, Token{
-					Lexeme:  "}",
-					Kind:    Punctuator,
-					Subkind: BlockEnd,
-					Pos:     &pos,
-				})
-				continue
-			}
-
-			// punctuator '('
-			if ch == '(' {
-				pos := l.posSpan(1)
-				l.next()
-				tokens = append(tokens, Token{
-					Lexeme:  "(",
-					Kind:    Punctuator,
-					Subkind: ParenOpen,
-					Pos:     &pos,
-				})
-				continue
-			}
-
-			// punctuator ')'
-			if ch == ')' {
-				pos := l.posSpan(1)
-				l.next()
-				tokens = append(tokens, Token{
-					Lexeme:  ")",
-					Kind:    Punctuator,
-					Subkind: ParenClose,
-					Pos:     &pos,
-				})
-				continue
-			}
-
-			// punctuator ':'
-			if ch == ':' {
-				pos := l.posSpan(1)
-				l.next()
-				tokens = append(tokens, Token{
-					Lexeme:  ":",
-					Kind:    Punctuator,
-					Subkind: Colon,
+					Subkind: subkind,
 					Pos:     &pos,
 				})
 				continue
@@ -432,6 +354,32 @@ func isOperatorStart(ch byte) bool {
 
 func isOperatorContinue(ch byte) bool {
 	return ch == '=' || ch == '&' || ch == '|' || ch == '.'
+}
+
+func punctuatorSubkind(ch byte) (PunctuatorSubkind, bool) {
+	switch ch {
+	case '=':
+		return Assign, true
+	case '{':
+		return BlockStart, true
+	case '}':
+		return BlockEnd, true
+	case '(':
+		return ParenOpen, true
+	case ')':
+		return ParenClose, true
+	case ';':
+		return StatementEnd, true
+	case ',':
+		return Comma, true
+	case ':':
+		return Colon, true
+	case '[':
+		return BracketOpen, true
+	case ']':
+		return BracketClose, true
+	}
+	return 0, false
 }
 
 func operatorSubkind(lex string) (OperatorSubkind, bool) {

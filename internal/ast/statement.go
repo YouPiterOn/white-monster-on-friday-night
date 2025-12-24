@@ -2,7 +2,6 @@ package ast
 
 import (
 	"youpiteron.dev/white-monster-on-friday-night/internal/common"
-	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 )
 
 type Statement interface {
@@ -13,7 +12,7 @@ type Statement interface {
 type Declaration struct {
 	IsMutable  bool
 	IsTyped    bool
-	TypeOf     lexer.TypeSubkind
+	TypeOf     *Type
 	Identifier *Identifier
 	Value      Expression
 	PosAt      *common.SourcePos

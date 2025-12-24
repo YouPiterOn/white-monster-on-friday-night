@@ -51,7 +51,7 @@ func TestParseDeclaration_VarWithTypeAndValue(t *testing.T) {
 	if !decl.IsTyped {
 		t.Error("expected IsTyped to be true")
 	}
-	if decl.TypeOf != lexer.TypeInt {
+	if decl.TypeOf != TypeInt() {
 		t.Errorf("expected TypeOf to be TypeInt, got %v", decl.TypeOf)
 	}
 	if decl.Identifier.Name != "x" {
@@ -112,7 +112,7 @@ func TestParseDeclaration_VarWithoutValue(t *testing.T) {
 	if decl.Value != nil {
 		t.Error("expected Value to be nil")
 	}
-	if decl.TypeOf != lexer.TypeBool {
+	if decl.TypeOf != TypeBool() {
 		t.Errorf("expected TypeOf to be TypeBool, got %v", decl.TypeOf)
 	}
 }
@@ -170,7 +170,7 @@ func TestParseFunction_Basic(t *testing.T) {
 	if len(fn.Params) != 1 {
 		t.Errorf("expected 1 parameter, got %d", len(fn.Params))
 	}
-	if fn.ReturnType != lexer.TypeInt {
+	if fn.ReturnType != TypeInt() {
 		t.Errorf("expected return type TypeInt, got %v", fn.ReturnType)
 	}
 }
@@ -442,7 +442,7 @@ func TestParseParam_Basic(t *testing.T) {
 	if param.Name != "x" {
 		t.Errorf("expected parameter name 'x', got '%s'", param.Name)
 	}
-	if param.TypeOf != lexer.TypeInt {
+	if param.TypeOf != TypeInt() {
 		t.Errorf("expected type TypeInt, got %v", param.TypeOf)
 	}
 }

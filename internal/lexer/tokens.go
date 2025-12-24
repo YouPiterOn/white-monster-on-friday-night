@@ -73,6 +73,8 @@ const (
 	StatementEnd
 	Comma
 	Colon
+	BracketOpen
+	BracketClose
 )
 
 func (k PunctuatorSubkind) String() string {
@@ -85,6 +87,8 @@ func (k PunctuatorSubkind) String() string {
 		";",
 		",",
 		":",
+		"[",
+		"]",
 	}[k]
 }
 
