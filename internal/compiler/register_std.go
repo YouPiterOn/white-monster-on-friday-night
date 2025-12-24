@@ -6,7 +6,7 @@ func RegisterStdGlobals(gt *GlobalTable) {
 		false,
 		TypeNativeFunction(),
 		&FuncSignature{
-			CallArgs:   []Type{TypeInt()},
+			CallArgs:   []*Type{TypeInt()},
 			ReturnType: TypeNull(),
 			Vararg:     false,
 		},

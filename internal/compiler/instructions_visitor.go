@@ -9,7 +9,7 @@ import (
 
 type VisitExprResult struct {
 	Reg           int
-	TypeOf        Type
+	TypeOf        *Type
 	FuncSignature *FuncSignature
 }
 
@@ -83,7 +83,7 @@ func (v *InstructionsVisitor) resetReg() int {
 	return reg
 }
 
-func (v *InstructionsVisitor) enterFunctionContext(returnType Type) {
+func (v *InstructionsVisitor) enterFunctionContext(returnType *Type) {
 	v.context = NewFunctionContext(v.context, returnType)
 }
 
@@ -267,7 +267,7 @@ func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 		}
 	}
 	reg := v.nextReg()
-	var typeOf Type
+	var typeOf *Type
 	var callable *FuncSignature
 	if localVar != nil {
 		v.context.AddInstruction(InstrLoadVar(reg, localVar.Slot))

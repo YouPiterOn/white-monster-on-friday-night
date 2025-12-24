@@ -14,14 +14,14 @@ func (c *BlockContext) ImplementContextInterface() Context {
 	return c
 }
 
-func (c *BlockContext) DefineVariable(name string, mutable bool, typeOf Type) int {
+func (c *BlockContext) DefineVariable(name string, mutable bool, typeOf *Type) int {
 	slot := c.currentVarSlot
 	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: nil}
 	c.currentVarSlot++
 	return slot
 }
 
-func (c *BlockContext) DefineFunctionVariable(name string, mutable bool, typeOf Type, funcSignature *FuncSignature) int {
+func (c *BlockContext) DefineFunctionVariable(name string, mutable bool, typeOf *Type, funcSignature *FuncSignature) int {
 	slot := c.currentVarSlot
 	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: funcSignature}
 	c.currentVarSlot++
@@ -85,7 +85,7 @@ func (c *BlockContext) AddConstant(value Value) int {
 	return c.parent.AddConstant(value)
 }
 
-func (c *BlockContext) AddParam(param Type) {
+func (c *BlockContext) AddParam(param *Type) {
 	if c.parent == nil {
 		panic("COMPILER ERROR: cannot add param to root block context")
 	}
@@ -109,14 +109,14 @@ func (c *BlockContext) Parent() Context {
 	return c.parent
 }
 
-func (c *BlockContext) ReturnType() Type {
+func (c *BlockContext) ReturnType() *Type {
 	if c.parent == nil {
 		panic("COMPILER ERROR: cannot get return type in root block context")
 	}
 	return c.parent.ReturnType()
 }
 
-func (c *BlockContext) Params() []Type {
+func (c *BlockContext) Params() []*Type {
 	if c.parent == nil {
 		panic("COMPILER ERROR: cannot get params in root block context")
 	}

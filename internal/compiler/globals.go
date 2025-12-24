@@ -9,14 +9,14 @@ func NewGlobalTable() *GlobalTable {
 	return &GlobalTable{ids: make(map[string]int), variables: make([]Variable, 0)}
 }
 
-func (g *GlobalTable) DefineVariable(name string, mutable bool, typeOf Type) int {
+func (g *GlobalTable) DefineVariable(name string, mutable bool, typeOf *Type) int {
 	slot := len(g.variables)
 	g.variables = append(g.variables, Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: nil})
 	g.ids[name] = slot
 	return slot
 }
 
-func (g *GlobalTable) DefineFunctionVariable(name string, mutable bool, typeOf Type, funcSignature *FuncSignature) int {
+func (g *GlobalTable) DefineFunctionVariable(name string, mutable bool, typeOf *Type, funcSignature *FuncSignature) int {
 	slot := len(g.variables)
 	g.variables = append(g.variables, Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: funcSignature})
 	g.ids[name] = slot

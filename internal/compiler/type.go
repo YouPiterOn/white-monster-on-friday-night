@@ -35,35 +35,44 @@ type Type struct {
 	ElementType *Type
 }
 
-func TypeInt() Type {
-	return Type{Type: TYPE_INT}
+var primitiveTypes = map[TypeEnum]*Type{
+	TYPE_INT:             {Type: TYPE_INT},
+	TYPE_BOOL:            {Type: TYPE_BOOL},
+	TYPE_NULL:            {Type: TYPE_NULL},
+	TYPE_VOID:            {Type: TYPE_VOID},
+	TYPE_CLOSURE:         {Type: TYPE_CLOSURE},
+	TYPE_NATIVE_FUNCTION: {Type: TYPE_NATIVE_FUNCTION},
 }
 
-func TypeBool() Type {
-	return Type{Type: TYPE_BOOL}
+func TypeInt() *Type {
+	return primitiveTypes[TYPE_INT]
 }
 
-func TypeNull() Type {
-	return Type{Type: TYPE_NULL}
+func TypeBool() *Type {
+	return primitiveTypes[TYPE_BOOL]
 }
 
-func TypeVoid() Type {
-	return Type{Type: TYPE_VOID}
+func TypeNull() *Type {
+	return primitiveTypes[TYPE_NULL]
 }
 
-func TypeClosure() Type {
-	return Type{Type: TYPE_CLOSURE}
+func TypeVoid() *Type {
+	return primitiveTypes[TYPE_VOID]
 }
 
-func TypeNativeFunction() Type {
-	return Type{Type: TYPE_NATIVE_FUNCTION}
+func TypeClosure() *Type {
+	return primitiveTypes[TYPE_CLOSURE]
 }
 
-func TypeArrayOf(elementType Type) Type {
-	return Type{Type: TYPE_ARRAY, ElementType: &elementType}
+func TypeNativeFunction() *Type {
+	return primitiveTypes[TYPE_NATIVE_FUNCTION]
 }
 
-func TypeFromTypeSubkind(typeSubkind lexer.TypeSubkind) Type {
+func TypeArrayOf(elementType *Type) *Type {
+	return &Type{Type: TYPE_ARRAY, ElementType: elementType}
+}
+
+func TypeFromTypeSubkind(typeSubkind lexer.TypeSubkind) *Type {
 	switch typeSubkind {
 	case lexer.TypeInt:
 		return TypeInt()
@@ -76,7 +85,7 @@ func TypeFromTypeSubkind(typeSubkind lexer.TypeSubkind) Type {
 	}
 }
 
-func (t Type) DefaultValue() Value {
+func (t *Type) DefaultValue() Value {
 	switch t.Type {
 	case TYPE_INT:
 		return NewIntValue(0)
@@ -88,17 +97,17 @@ func (t Type) DefaultValue() Value {
 	panic(fmt.Sprintf("COMPILER ERROR: invalid type %v", t))
 }
 
-func (t Type) IsEqual(other Type) bool {
+func (t *Type) IsEqual(other *Type) bool {
 	if t.Type != other.Type {
 		return false
 	}
 	if t.ElementType == nil {
 		return true
 	}
-	return t.ElementType.IsEqual(*other.ElementType)
+	return t.ElementType.IsEqual(other.ElementType)
 }
 
-func (t Type) String() string {
+func (t *Type) String() string {
 	if t.ElementType == nil {
 		return t.Type.String()
 	}

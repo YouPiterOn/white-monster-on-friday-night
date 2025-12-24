@@ -4,7 +4,7 @@ type ModuleContext struct {
 	currentVarSlot int
 	variables      map[string]Variable
 
-	returnType   Type
+	returnType   *Type
 	instructions []Instruction
 	constants    []Value
 }
@@ -25,14 +25,14 @@ func (c *ModuleContext) ImplementContextInterface() Context {
 	return c
 }
 
-func (c *ModuleContext) DefineVariable(name string, mutable bool, typeOf Type) int {
+func (c *ModuleContext) DefineVariable(name string, mutable bool, typeOf *Type) int {
 	slot := c.currentVarSlot
 	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: nil}
 	c.currentVarSlot++
 	return slot
 }
 
-func (c *ModuleContext) DefineFunctionVariable(name string, mutable bool, typeOf Type, funcSignature *FuncSignature) int {
+func (c *ModuleContext) DefineFunctionVariable(name string, mutable bool, typeOf *Type, funcSignature *FuncSignature) int {
 	slot := c.currentVarSlot
 	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: funcSignature}
 	c.currentVarSlot++
@@ -77,7 +77,7 @@ func (c *ModuleContext) AddConstant(value Value) int {
 	return len(c.constants) - 1
 }
 
-func (c *ModuleContext) AddParam(param Type) {
+func (c *ModuleContext) AddParam(param *Type) {
 	panic("COMPILER ERROR: cannot add param to module context")
 }
 
@@ -95,10 +95,10 @@ func (c *ModuleContext) Parent() Context {
 	return nil
 }
 
-func (c *ModuleContext) ReturnType() Type {
+func (c *ModuleContext) ReturnType() *Type {
 	return c.returnType
 }
 
-func (c *ModuleContext) Params() []Type {
-	return []Type{}
+func (c *ModuleContext) Params() []*Type {
+	return []*Type{}
 }
