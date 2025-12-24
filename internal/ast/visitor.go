@@ -8,8 +8,10 @@ type Visitor[R any] interface {
 	VisitIntLiteral(n *IntLiteral) R
 	VisitBoolLiteral(n *BoolLiteral) R
 	VisitNullLiteral(n *NullLiteral) R
+	VisitArrayLiteral(n *ArrayLiteral) R
 	VisitIdentifier(n *Identifier) R
 	VisitBinaryExpr(n *BinaryExpr) R
+	VisitIndexExpr(n *IndexExpr) R
 	VisitParam(n *Param) R
 	VisitFunction(n *Function) R
 	VisitBlock(n *Block) R

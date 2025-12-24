@@ -1,94 +1,97 @@
 package compiler
 
-import "youpiteron.dev/white-monster-on-friday-night/internal/lexer"
+import (
+	"youpiteron.dev/white-monster-on-friday-night/internal/ast"
+	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
+)
 
 type BinaryOpInfo struct {
-	ResultType ValueType
+	ResultType *ast.Type
 	OpCode     OpCode
 }
 
-var BinaryOpTable = map[lexer.OperatorSubkind]map[ValueType]map[ValueType]BinaryOpInfo{
+var BinaryOpTable = map[lexer.OperatorSubkind]map[ast.TypeEnum]map[ast.TypeEnum]BinaryOpInfo{
 	lexer.OperatorPlus: {
-		VAL_INT: {
-			VAL_INT: {ResultType: VAL_INT, OpCode: ADD_INT},
+		ast.TYPE_INT: {
+			ast.TYPE_INT: {ResultType: ast.TypeInt(), OpCode: ADD_INT},
 		},
 	},
 	lexer.OperatorMinus: {
-		VAL_INT: {
-			VAL_INT: {ResultType: VAL_INT, OpCode: SUB_INT},
+		ast.TYPE_INT: {
+			ast.TYPE_INT: {ResultType: ast.TypeInt(), OpCode: SUB_INT},
 		},
 	},
 	lexer.OperatorStar: {
-		VAL_INT: {
-			VAL_INT: {ResultType: VAL_INT, OpCode: MUL_INT},
+		ast.TYPE_INT: {
+			ast.TYPE_INT: {ResultType: ast.TypeInt(), OpCode: MUL_INT},
 		},
 	},
 	lexer.OperatorSlash: {
-		VAL_INT: {
-			VAL_INT: {ResultType: VAL_INT, OpCode: DIV_INT},
+		ast.TYPE_INT: {
+			ast.TYPE_INT: {ResultType: ast.TypeInt(), OpCode: DIV_INT},
 		},
 	},
 	lexer.OperatorEqual: {
-		VAL_INT: {
-			VAL_INT: {ResultType: VAL_BOOL, OpCode: EQ_INT},
+		ast.TYPE_INT: {
+			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: EQ_INT},
 		},
-		VAL_BOOL: {
-			VAL_BOOL: {ResultType: VAL_BOOL, OpCode: EQ_BOOL},
+		ast.TYPE_BOOL: {
+			ast.TYPE_BOOL: {ResultType: ast.TypeBool(), OpCode: EQ_BOOL},
 		},
 	},
 	lexer.OperatorNotEqual: {
-		VAL_INT: {
-			VAL_INT: {ResultType: VAL_BOOL, OpCode: NE_INT},
+		ast.TYPE_INT: {
+			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: NE_INT},
 		},
-		VAL_BOOL: {
-			VAL_BOOL: {ResultType: VAL_BOOL, OpCode: NE_BOOL},
+		ast.TYPE_BOOL: {
+			ast.TYPE_BOOL: {ResultType: ast.TypeBool(), OpCode: NE_BOOL},
 		},
 	},
 	lexer.OperatorGreater: {
-		VAL_INT: {
-			VAL_INT: {ResultType: VAL_BOOL, OpCode: GT_INT},
+		ast.TYPE_INT: {
+			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: GT_INT},
 		},
 	},
 	lexer.OperatorGreaterEqual: {
-		VAL_INT: {
-			VAL_INT: {ResultType: VAL_BOOL, OpCode: GTE_INT},
+		ast.TYPE_INT: {
+			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: GTE_INT},
 		},
 	},
 	lexer.OperatorLess: {
-		VAL_INT: {
-			VAL_INT: {ResultType: VAL_BOOL, OpCode: LT_INT},
+		ast.TYPE_INT: {
+			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: LT_INT},
 		},
 	},
 	lexer.OperatorLessEqual: {
-		VAL_INT: {
-			VAL_INT: {ResultType: VAL_BOOL, OpCode: LTE_INT},
+		ast.TYPE_INT: {
+			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: LTE_INT},
 		},
 	},
 	lexer.OperatorAnd: {
-		VAL_BOOL: {
-			VAL_BOOL: {ResultType: VAL_BOOL, OpCode: AND_BOOL},
+		ast.TYPE_BOOL: {
+			ast.TYPE_BOOL: {ResultType: ast.TypeBool(), OpCode: AND_BOOL},
 		},
 	},
 	lexer.OperatorOr: {
-		VAL_BOOL: {
-			VAL_BOOL: {ResultType: VAL_BOOL, OpCode: OR_BOOL},
+		ast.TYPE_BOOL: {
+			ast.TYPE_BOOL: {ResultType: ast.TypeBool(), OpCode: OR_BOOL},
 		},
 	},
 }
 
 func ResolveBinaryOp(
 	op lexer.OperatorSubkind,
-	left ValueType,
-	right ValueType,
+	left *ast.Type,
+	right *ast.Type,
 ) (BinaryOpInfo, bool) {
 	opMap, ok := BinaryOpTable[op]
 	if !ok {
 		return BinaryOpInfo{}, false
 	}
-	leftMap, ok := opMap[left]
+	leftMap, ok := opMap[left.Type]
 	if !ok {
 		return BinaryOpInfo{}, false
 	}
-	info, ok := leftMap[right]
+	info, ok := leftMap[right.Type]
 	return info, ok
 }

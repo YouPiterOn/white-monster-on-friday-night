@@ -6,7 +6,11 @@ a = 60;
   const b = 123;
 }
 
-const b: int = 123;
+var b: []int = [1, 2, 3];
+
+b = append(b, 4);
+
+println(b[3]);
 
 function addToA(other: int): int {
   return (a + 0) + other;
@@ -16,15 +20,15 @@ function lessThenA(other: int): bool {
   return other < a;
 }
 
-addToA(5)
+addToA(5);
 
-println(a)
+println(a);
 
-1 + 1
+1 + 1;
 
-println(1)
+println(1);
 
-1 + println(1)
+1 + println(1);
 
 if (lessThenA(69)) {
   return a;

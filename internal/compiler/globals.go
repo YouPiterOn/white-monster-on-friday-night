@@ -1,5 +1,7 @@
 package compiler
 
+import "youpiteron.dev/white-monster-on-friday-night/internal/ast"
+
 type GlobalTable struct {
 	ids       map[string]int
 	variables []Variable
@@ -9,14 +11,14 @@ func NewGlobalTable() *GlobalTable {
 	return &GlobalTable{ids: make(map[string]int), variables: make([]Variable, 0)}
 }
 
-func (g *GlobalTable) DefineVariable(name string, mutable bool, typeOf ValueType) int {
+func (g *GlobalTable) DefineVariable(name string, mutable bool, typeOf *ast.Type) int {
 	slot := len(g.variables)
 	g.variables = append(g.variables, Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: nil})
 	g.ids[name] = slot
 	return slot
 }
 
-func (g *GlobalTable) DefineFunctionVariable(name string, mutable bool, typeOf ValueType, funcSignature *FuncSignature) int {
+func (g *GlobalTable) DefineFunctionVariable(name string, mutable bool, typeOf *ast.Type, funcSignature *FuncSignature) int {
 	slot := len(g.variables)
 	g.variables = append(g.variables, Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: funcSignature})
 	g.ids[name] = slot

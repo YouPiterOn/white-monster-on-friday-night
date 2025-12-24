@@ -9,7 +9,7 @@ import (
 
 type VisitExprResult struct {
 	Reg           int
-	TypeOf        ValueType
+	TypeOf        *ast.Type
 	FuncSignature *FuncSignature
 }
 
@@ -83,7 +83,7 @@ func (v *InstructionsVisitor) resetReg() int {
 	return reg
 }
 
-func (v *InstructionsVisitor) enterFunctionContext(returnType ValueType) {
+func (v *InstructionsVisitor) enterFunctionContext(returnType *ast.Type) {
 	v.context = NewFunctionContext(v.context, returnType)
 }
 
@@ -126,8 +126,8 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 		}
 
 		if n.IsTyped {
-			if resultVisitExpr.TypeOf != ValueTypeFromTypeSubkind(n.TypeOf) {
-				v.addError(fmt.Sprintf("variable %s is of type %s, but declaration is of type %s", n.Identifier.Name, resultVisitExpr.TypeOf, ValueTypeFromTypeSubkind(n.TypeOf)), n.Identifier.Pos())
+			if !resultVisitExpr.TypeOf.IsEqual(n.TypeOf) {
+				v.addError(fmt.Sprintf("variable %s is of type %s, but declaration is of type %s", n.Identifier.Name, resultVisitExpr.TypeOf, n.TypeOf), n.Identifier.Pos())
 				return nil
 			}
 		}
@@ -144,9 +144,9 @@ func (v *InstructionsVisitor) VisitDeclaration(n *ast.Declaration) any {
 			v.addError(fmt.Sprintf("constant %s must have a value", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
-		defaultValue := ValueTypeFromTypeSubkind(n.TypeOf).DefaultValue()
+		defaultValue := DefaultValue(n.TypeOf)
 		constIndex := v.context.AddConstant(defaultValue)
-		slot := v.context.DefineVariable(n.Identifier.Name, n.IsMutable, ValueTypeFromTypeSubkind(n.TypeOf))
+		slot := v.context.DefineVariable(n.Identifier.Name, n.IsMutable, n.TypeOf)
 
 		reg := v.nextReg()
 		v.context.AddInstruction(InstrLoadConst(reg, constIndex))
@@ -177,7 +177,7 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 			v.addError(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
-		if resultVisitExpr.TypeOf != localVar.TypeOf {
+		if !resultVisitExpr.TypeOf.IsEqual(localVar.TypeOf) {
 			v.addError(fmt.Sprintf("variable %s is of type %s, but assignment is of type %s", n.Identifier.Name, localVar.TypeOf, resultVisitExpr.TypeOf), n.Identifier.Pos())
 			return nil
 		}
@@ -187,7 +187,7 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 			v.addError(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
-		if resultVisitExpr.TypeOf != upvar.TypeOf {
+		if !resultVisitExpr.TypeOf.IsEqual(upvar.TypeOf) {
 			v.addError(fmt.Sprintf("variable %s is of type %s, but assignment is of type %s", n.Identifier.Name, upvar.TypeOf, resultVisitExpr.TypeOf), n.Identifier.Pos())
 			return nil
 		}
@@ -197,7 +197,7 @@ func (v *InstructionsVisitor) VisitAssignment(n *ast.Assignment) any {
 			v.addError(fmt.Sprintf("variable %s is not mutable", n.Identifier.Name), n.Identifier.Pos())
 			return nil
 		}
-		if resultVisitExpr.TypeOf != globalVar.TypeOf {
+		if !resultVisitExpr.TypeOf.IsEqual(globalVar.TypeOf) {
 			v.addError(fmt.Sprintf("variable %s is of type %s, but assignment is of type %s", n.Identifier.Name, globalVar.TypeOf, resultVisitExpr.TypeOf), n.Identifier.Pos())
 			return nil
 		}
@@ -215,7 +215,7 @@ func (v *InstructionsVisitor) VisitReturn(n *ast.Return) any {
 		return nil
 	}
 	returnType := v.context.ReturnType()
-	if resultVisitExpr.TypeOf != returnType {
+	if !resultVisitExpr.TypeOf.IsEqual(returnType) {
 		v.addError(fmt.Sprintf("return value must be of type %s, but got %s", returnType, resultVisitExpr.TypeOf), n.Value.Pos())
 		return nil
 	}
@@ -230,7 +230,7 @@ func (v *InstructionsVisitor) VisitIntLiteral(n *ast.IntLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.context.AddConstant(NewIntValue(n.Value))
 	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
-	return &VisitExprResult{Reg: reg, TypeOf: VAL_INT}
+	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeInt()}
 }
 
 func (v *InstructionsVisitor) VisitBoolLiteral(n *ast.BoolLiteral) any {
@@ -240,7 +240,7 @@ func (v *InstructionsVisitor) VisitBoolLiteral(n *ast.BoolLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.context.AddConstant(NewBoolValue(n.Value))
 	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
-	return &VisitExprResult{Reg: reg, TypeOf: VAL_BOOL}
+	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeBool()}
 }
 
 func (v *InstructionsVisitor) VisitNullLiteral(n *ast.NullLiteral) any {
@@ -250,7 +250,32 @@ func (v *InstructionsVisitor) VisitNullLiteral(n *ast.NullLiteral) any {
 	reg := v.nextReg()
 	constIndex := v.context.AddConstant(NewNullValue())
 	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
-	return &VisitExprResult{Reg: reg, TypeOf: VAL_NULL}
+	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeNull()}
+}
+
+func (v *InstructionsVisitor) VisitArrayLiteral(n *ast.ArrayLiteral) any {
+	if n.IsStatement {
+		return nil
+	}
+	elements := []int{}
+	var typeOf *ast.Type
+	for _, element := range n.Elements {
+		elementResult := element.Visit(v)
+		elementVisitExpr, ok := CastVisitExprResult(elementResult)
+		if !ok {
+			return nil
+		}
+		elements = append(elements, elementVisitExpr.Reg)
+		if typeOf == nil {
+			typeOf = elementVisitExpr.TypeOf
+		} else if !typeOf.IsEqual(elementVisitExpr.TypeOf) {
+			v.addError(fmt.Sprintf("array elements must be of type %s, but got %s", typeOf, elementVisitExpr.TypeOf), element.Pos())
+			return nil
+		}
+	}
+	reg := v.nextReg()
+	v.context.AddInstruction(InstrMakeArray(reg, elements))
+	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeArrayOf(typeOf)}
 }
 
 func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
@@ -267,7 +292,7 @@ func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 		}
 	}
 	reg := v.nextReg()
-	var typeOf ValueType
+	var typeOf *ast.Type
 	var callable *FuncSignature
 	if localVar != nil {
 		v.context.AddInstruction(InstrLoadVar(reg, localVar.Slot))
@@ -306,8 +331,8 @@ func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
 }
 
 func (v *InstructionsVisitor) VisitParam(n *ast.Param) any {
-	v.context.AddParam(ValueTypeFromTypeSubkind(n.TypeOf))
-	v.context.DefineVariable(n.Name, false, ValueTypeFromTypeSubkind(n.TypeOf))
+	v.context.AddParam(n.TypeOf)
+	v.context.DefineVariable(n.Name, false, n.TypeOf)
 	return nil
 }
 
@@ -318,7 +343,7 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 		return nil
 	}
 
-	v.enterFunctionContext(ValueTypeFromTypeSubkind(n.ReturnType))
+	v.enterFunctionContext(n.ReturnType)
 
 	for _, param := range n.Params {
 		param.Visit(v)
@@ -332,11 +357,11 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 
 	functionSlot := v.exitFunctionContext()
 
-	slot := v.context.DefineFunctionVariable(n.Name, false, VAL_CLOSURE, &FuncSignature{CallArgs: params, ReturnType: returnType})
+	slot := v.context.DefineFunctionVariable(n.Name, false, ast.TypeClosure(), &FuncSignature{CallArgs: params, ReturnType: returnType})
 	reg := v.nextReg()
 	v.context.AddInstruction(InstrClosure(reg, functionSlot))
 	v.context.AddInstruction(InstrStoreVar(reg, slot))
-	return &VisitExprResult{Reg: reg, TypeOf: VAL_CLOSURE}
+	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeClosure()}
 }
 
 func (v *InstructionsVisitor) VisitBlock(n *ast.Block) any {
@@ -354,7 +379,7 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 	if !ok {
 		return nil
 	}
-	if resultVisitExpr.TypeOf != VAL_CLOSURE && resultVisitExpr.TypeOf != VAL_NATIVE_FUNCTION {
+	if !resultVisitExpr.TypeOf.IsEqual(ast.TypeClosure()) && !resultVisitExpr.TypeOf.IsEqual(ast.TypeNativeFunction()) {
 		v.addError(fmt.Sprintf("function call must be of type closure, but got %s", resultVisitExpr.TypeOf), n.Identifier.Pos())
 		return nil
 	}
@@ -380,7 +405,7 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 			return nil
 		}
 
-		if argumentVisitExpr.TypeOf != paramType {
+		if !argumentVisitExpr.TypeOf.IsEqual(paramType) {
 			v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", i, paramType, argumentVisitExpr.TypeOf), argument.Pos())
 			isError = true
 			continue
@@ -397,13 +422,38 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 	return &VisitExprResult{Reg: resultReg, TypeOf: resultVisitExpr.FuncSignature.ReturnType}
 }
 
+func (v *InstructionsVisitor) VisitIndexExpr(n *ast.IndexExpr) any {
+	arrayResult := n.Array.Visit(v)
+	arrayVisitExpr, ok := CastVisitExprResult(arrayResult)
+	if !ok {
+		return nil
+	}
+	indexResult := n.Index.Visit(v)
+	indexVisitExpr, ok := CastVisitExprResult(indexResult)
+	if !ok {
+		return nil
+	}
+
+	if arrayVisitExpr.TypeOf.Type != ast.TYPE_ARRAY {
+		v.addError(fmt.Sprintf("expression must be of type array, but got %s", arrayVisitExpr.TypeOf), n.Array.Pos())
+		return nil
+	}
+	if !indexVisitExpr.TypeOf.IsEqual(ast.TypeInt()) {
+		v.addError(fmt.Sprintf("index must be of type int, but got %s", indexVisitExpr.TypeOf), n.Index.Pos())
+		return nil
+	}
+	reg := v.nextReg()
+	v.context.AddInstruction(InstrIndexArray(reg, arrayVisitExpr.Reg, indexVisitExpr.Reg))
+	return &VisitExprResult{Reg: reg, TypeOf: arrayVisitExpr.TypeOf.ElementType}
+}
+
 func (v *InstructionsVisitor) VisitIf(n *ast.If) any {
 	conditionResult := n.Condition.Visit(v)
 	conditionVisitExpr, ok := CastVisitExprResult(conditionResult)
 	if !ok {
 		return nil
 	}
-	if conditionVisitExpr.TypeOf != VAL_BOOL {
+	if !conditionVisitExpr.TypeOf.IsEqual(ast.TypeBool()) {
 		v.addError(fmt.Sprintf("condition must be of type bool, but got %s", conditionVisitExpr.TypeOf), n.Condition.Pos())
 		return nil
 	}
