@@ -7,13 +7,13 @@ type FunctionContext struct {
 	variables        map[string]Variable
 	upvarsMap        map[string]Upvar
 
-	params       []ValueType
-	returnType   ValueType
+	params       []Type
+	returnType   Type
 	instructions []Instruction
 	constants    []Value
 }
 
-func NewFunctionContext(parent Context, returnType ValueType) *FunctionContext {
+func NewFunctionContext(parent Context, returnType Type) *FunctionContext {
 	return &FunctionContext{parent: parent, variables: make(map[string]Variable), upvarsMap: make(map[string]Upvar), currentVarSlot: 0, currentUpvarSlot: 0, returnType: returnType}
 }
 
@@ -29,14 +29,14 @@ func (c *FunctionContext) ImplementContextInterface() Context {
 	return c
 }
 
-func (c *FunctionContext) DefineVariable(name string, mutable bool, typeOf ValueType) int {
+func (c *FunctionContext) DefineVariable(name string, mutable bool, typeOf Type) int {
 	slot := c.currentVarSlot
 	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: nil}
 	c.currentVarSlot++
 	return slot
 }
 
-func (c *FunctionContext) DefineFunctionVariable(name string, mutable bool, typeOf ValueType, funcSignature *FuncSignature) int {
+func (c *FunctionContext) DefineFunctionVariable(name string, mutable bool, typeOf Type, funcSignature *FuncSignature) int {
 	slot := c.currentVarSlot
 	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: funcSignature}
 	c.currentVarSlot++
@@ -118,7 +118,7 @@ func (c *FunctionContext) AddConstant(value Value) int {
 	return len(c.constants) - 1
 }
 
-func (c *FunctionContext) AddParam(param ValueType) {
+func (c *FunctionContext) AddParam(param Type) {
 	c.params = append(c.params, param)
 }
 
@@ -136,10 +136,10 @@ func (c *FunctionContext) Parent() Context {
 	return c.parent
 }
 
-func (c *FunctionContext) ReturnType() ValueType {
+func (c *FunctionContext) ReturnType() Type {
 	return c.returnType
 }
 
-func (c *FunctionContext) Params() []ValueType {
+func (c *FunctionContext) Params() []Type {
 	return c.params
 }

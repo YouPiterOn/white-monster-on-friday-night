@@ -209,7 +209,7 @@ func TestVisitIntLiteral_Expression_NotOptimized(t *testing.T) {
 		t.Fatal("expected VisitExprResult")
 	}
 
-	if visitResult.TypeOf != VAL_INT {
+	if !visitResult.TypeOf.IsEqual(TypeInt()) {
 		t.Errorf("expected type VAL_INT, got %s", visitResult.TypeOf)
 	}
 

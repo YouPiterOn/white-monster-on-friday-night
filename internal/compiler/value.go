@@ -1,10 +1,7 @@
 package compiler
 
 import (
-	"fmt"
-
 	"youpiteron.dev/white-monster-on-friday-night/internal/api"
-	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 )
 
 type ValueType int
@@ -15,6 +12,7 @@ const (
 	VAL_CLOSURE
 	VAL_NULL
 	VAL_NATIVE_FUNCTION
+	VAL_ARRAY
 )
 
 func (t ValueType) String() string {
@@ -24,31 +22,8 @@ func (t ValueType) String() string {
 		"CLOSURE",
 		"NULL",
 		"NATIVE_FUNCTION",
+		"ARRAY",
 	}[t]
-}
-
-func ValueTypeFromTypeSubkind(typeSubkind lexer.TypeSubkind) ValueType {
-	switch typeSubkind {
-	case lexer.TypeInt:
-		return VAL_INT
-	case lexer.TypeBool:
-		return VAL_BOOL
-	case lexer.TypeNull:
-		return VAL_NULL
-	}
-	panic(fmt.Sprintf("COMPILER ERROR: invalid type subkind %v", typeSubkind))
-}
-
-func (t ValueType) DefaultValue() Value {
-	switch t {
-	case VAL_INT:
-		return NewIntValue(0)
-	case VAL_BOOL:
-		return NewBoolValue(false)
-	case VAL_NULL:
-		return NewNullValue()
-	}
-	panic(fmt.Sprintf("COMPILER ERROR: invalid type %v", t))
 }
 
 type Value struct {
@@ -57,6 +32,7 @@ type Value struct {
 	Bool    bool
 	Closure Closure
 	Native  NativeFunction
+	Array   []Value
 }
 
 func NewIntValue(value int) Value {
@@ -77,6 +53,10 @@ func NewClosureValue(proto *FunctionProto) Value {
 
 func NewNativeFunctionValue(function NativeFunction) Value {
 	return Value{TypeOf: VAL_NATIVE_FUNCTION, Native: function}
+}
+
+func NewArrayValue(elements []Value) Value {
+	return Value{TypeOf: VAL_ARRAY, Array: elements}
 }
 
 type UpvalueCell struct {
