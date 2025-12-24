@@ -118,6 +118,30 @@ func (p *Parser) ParseStatement() Statement {
 	return expression
 }
 
+func (p *Parser) ParseType() *Type {
+	tok := p.peek(0)
+	if tok == nil {
+		return nil
+	}
+	if tok.Kind == lexer.Punctuator && tok.Subkind == lexer.ArrayOpen {
+		p.eat()
+		arrClose := p.eatExpected(lexer.Punctuator, lexer.ArrayClose, "expected ']'")
+		if arrClose == nil {
+			return nil
+		}
+		elementType := p.eatExpected(lexer.Type, nil, "expected type")
+		if elementType == nil {
+			return nil
+		}
+		return TypeArrayOf(TypeFromTypeSubkind(elementType.Subkind.(lexer.TypeSubkind)))
+	} else if tok.Kind == lexer.Type {
+		p.eat()
+		return TypeFromTypeSubkind(tok.Subkind.(lexer.TypeSubkind))
+	}
+	p.addError(fmt.Sprintf("expected type but got %v(%v)", tok.Kind, tok.Subkind), tok.Pos)
+	return nil
+}
+
 func (p *Parser) ParseFunction() Statement {
 	kw := p.eatExpected(lexer.Keyword, lexer.KeywordFunction, "expected 'function'")
 	if kw == nil {
@@ -155,13 +179,13 @@ func (p *Parser) ParseFunction() Statement {
 	if colon == nil {
 		return nil
 	}
-	typeTok := p.eatExpected(lexer.Type, nil, "expected type")
-	if typeTok == nil {
+	returnType := p.ParseType()
+	if returnType == nil {
 		return nil
 	}
 	body := p.ParseBody()
 
-	return &Function{Name: idTok.Lexeme, Params: params, Body: body, ReturnType: typeTok.Subkind.(lexer.TypeSubkind), PosAt: kw.Pos}
+	return &Function{Name: idTok.Lexeme, Params: params, Body: body, ReturnType: returnType, PosAt: kw.Pos}
 }
 
 func (p *Parser) ParseParam() *Param {
@@ -173,11 +197,11 @@ func (p *Parser) ParseParam() *Param {
 	if colon == nil {
 		return nil
 	}
-	typeTok := p.eatExpected(lexer.Type, nil, "expected type")
-	if typeTok == nil {
+	typeOf := p.ParseType()
+	if typeOf == nil {
 		return nil
 	}
-	return &Param{Name: idTok.Lexeme, TypeOf: typeTok.Subkind.(lexer.TypeSubkind), PosAt: idTok.Pos}
+	return &Param{Name: idTok.Lexeme, TypeOf: typeOf, PosAt: idTok.Pos}
 }
 
 func (p *Parser) ParseBody() []Statement {
@@ -272,16 +296,15 @@ func (p *Parser) ParseDeclaration() *Declaration {
 	}
 
 	isTyped := false
-	var typeOf lexer.TypeSubkind
+	var typeOf *Type
 	colonTok := p.peek(0)
 	if colonTok != nil && colonTok.Kind == lexer.Punctuator && colonTok.Subkind == lexer.Colon {
 		isTyped = true
 		p.eat()
-		typeTok := p.eatExpected(lexer.Type, nil, "expected type")
-		if typeTok == nil {
+		typeOf = p.ParseType()
+		if typeOf == nil {
 			return nil
 		}
-		typeOf = typeTok.Subkind.(lexer.TypeSubkind)
 	}
 
 	eqTok := p.peek(0)

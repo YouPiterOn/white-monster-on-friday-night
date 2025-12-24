@@ -6,7 +6,7 @@ a = 60;
   const b = 123;
 }
 
-const b: int = 123;
+var b: []int;
 
 function addToA(other: int): int {
   return (a + 0) + other;

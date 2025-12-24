@@ -1,7 +1,10 @@
 package compiler
 
 import (
+	"fmt"
+
 	"youpiteron.dev/white-monster-on-friday-night/internal/api"
+	"youpiteron.dev/white-monster-on-friday-night/internal/ast"
 )
 
 type ValueType int
@@ -57,6 +60,20 @@ func NewNativeFunctionValue(function NativeFunction) Value {
 
 func NewArrayValue(elements []Value) Value {
 	return Value{TypeOf: VAL_ARRAY, Array: elements}
+}
+
+func DefaultValue(typeOf *ast.Type) Value {
+	switch typeOf.Type {
+	case ast.TYPE_INT:
+		return NewIntValue(0)
+	case ast.TYPE_BOOL:
+		return NewBoolValue(false)
+	case ast.TYPE_NULL:
+		return NewNullValue()
+	case ast.TYPE_ARRAY:
+		return NewArrayValue([]Value{})
+	}
+	panic(fmt.Sprintf("invalid type %v", typeOf))
 }
 
 type UpvalueCell struct {

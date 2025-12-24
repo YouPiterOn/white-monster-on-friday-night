@@ -1,13 +1,15 @@
 package compiler
 
+import "youpiteron.dev/white-monster-on-friday-night/internal/ast"
+
 func RegisterStdGlobals(gt *GlobalTable) {
 	gt.DefineFunctionVariable(
 		"println",
 		false,
-		TypeNativeFunction(),
+		ast.TypeNativeFunction(),
 		&FuncSignature{
-			CallArgs:   []*Type{TypeInt()},
-			ReturnType: TypeNull(),
+			CallArgs:   []*ast.Type{ast.TypeInt()},
+			ReturnType: ast.TypeNull(),
 			Vararg:     false,
 		},
 	)

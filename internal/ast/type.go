@@ -1,4 +1,4 @@
-package compiler
+package ast
 
 import (
 	"fmt"
@@ -81,20 +81,8 @@ func TypeFromTypeSubkind(typeSubkind lexer.TypeSubkind) *Type {
 	case lexer.TypeNull:
 		return TypeNull()
 	default:
-		panic(fmt.Sprintf("COMPILER ERROR: invalid type subkind %s", typeSubkind.String()))
+		panic(fmt.Sprintf("invalid type subkind %s", typeSubkind.String()))
 	}
-}
-
-func (t *Type) DefaultValue() Value {
-	switch t.Type {
-	case TYPE_INT:
-		return NewIntValue(0)
-	case TYPE_BOOL:
-		return NewBoolValue(false)
-	case TYPE_NULL:
-		return NewNullValue()
-	}
-	panic(fmt.Sprintf("COMPILER ERROR: invalid type %v", t))
 }
 
 func (t *Type) IsEqual(other *Type) bool {
@@ -111,5 +99,5 @@ func (t *Type) String() string {
 	if t.ElementType == nil {
 		return t.Type.String()
 	}
-	return fmt.Sprintf("%s<%s>", t.Type.String(), t.ElementType.String())
+	return fmt.Sprintf("[]%s", t.ElementType.String())
 }

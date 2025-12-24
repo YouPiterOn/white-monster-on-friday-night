@@ -1,16 +1,18 @@
 package compiler
 
+import "youpiteron.dev/white-monster-on-friday-night/internal/ast"
+
 type ModuleContext struct {
 	currentVarSlot int
 	variables      map[string]Variable
 
-	returnType   *Type
+	returnType   *ast.Type
 	instructions []Instruction
 	constants    []Value
 }
 
 func NewModuleContext() *ModuleContext {
-	return &ModuleContext{currentVarSlot: 0, variables: make(map[string]Variable), returnType: TypeInt(), instructions: make([]Instruction, 0), constants: make([]Value, 0)}
+	return &ModuleContext{currentVarSlot: 0, variables: make(map[string]Variable), returnType: ast.TypeInt(), instructions: make([]Instruction, 0), constants: make([]Value, 0)}
 }
 
 func CastModuleContext(context Context) *ModuleContext {
@@ -25,14 +27,14 @@ func (c *ModuleContext) ImplementContextInterface() Context {
 	return c
 }
 
-func (c *ModuleContext) DefineVariable(name string, mutable bool, typeOf *Type) int {
+func (c *ModuleContext) DefineVariable(name string, mutable bool, typeOf *ast.Type) int {
 	slot := c.currentVarSlot
 	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: nil}
 	c.currentVarSlot++
 	return slot
 }
 
-func (c *ModuleContext) DefineFunctionVariable(name string, mutable bool, typeOf *Type, funcSignature *FuncSignature) int {
+func (c *ModuleContext) DefineFunctionVariable(name string, mutable bool, typeOf *ast.Type, funcSignature *FuncSignature) int {
 	slot := c.currentVarSlot
 	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: funcSignature}
 	c.currentVarSlot++
@@ -77,7 +79,7 @@ func (c *ModuleContext) AddConstant(value Value) int {
 	return len(c.constants) - 1
 }
 
-func (c *ModuleContext) AddParam(param *Type) {
+func (c *ModuleContext) AddParam(param *ast.Type) {
 	panic("COMPILER ERROR: cannot add param to module context")
 }
 
@@ -95,10 +97,10 @@ func (c *ModuleContext) Parent() Context {
 	return nil
 }
 
-func (c *ModuleContext) ReturnType() *Type {
+func (c *ModuleContext) ReturnType() *ast.Type {
 	return c.returnType
 }
 
-func (c *ModuleContext) Params() []*Type {
-	return []*Type{}
+func (c *ModuleContext) Params() []*ast.Type {
+	return []*ast.Type{}
 }

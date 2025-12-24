@@ -1,5 +1,7 @@
 package compiler
 
+import "youpiteron.dev/white-monster-on-friday-night/internal/ast"
+
 type FunctionContext struct {
 	parent           Context
 	currentVarSlot   int
@@ -7,13 +9,13 @@ type FunctionContext struct {
 	variables        map[string]Variable
 	upvarsMap        map[string]Upvar
 
-	params       []*Type
-	returnType   *Type
+	params       []*ast.Type
+	returnType   *ast.Type
 	instructions []Instruction
 	constants    []Value
 }
 
-func NewFunctionContext(parent Context, returnType *Type) *FunctionContext {
+func NewFunctionContext(parent Context, returnType *ast.Type) *FunctionContext {
 	return &FunctionContext{parent: parent, variables: make(map[string]Variable), upvarsMap: make(map[string]Upvar), currentVarSlot: 0, currentUpvarSlot: 0, returnType: returnType}
 }
 
@@ -29,14 +31,14 @@ func (c *FunctionContext) ImplementContextInterface() Context {
 	return c
 }
 
-func (c *FunctionContext) DefineVariable(name string, mutable bool, typeOf *Type) int {
+func (c *FunctionContext) DefineVariable(name string, mutable bool, typeOf *ast.Type) int {
 	slot := c.currentVarSlot
 	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: nil}
 	c.currentVarSlot++
 	return slot
 }
 
-func (c *FunctionContext) DefineFunctionVariable(name string, mutable bool, typeOf *Type, funcSignature *FuncSignature) int {
+func (c *FunctionContext) DefineFunctionVariable(name string, mutable bool, typeOf *ast.Type, funcSignature *FuncSignature) int {
 	slot := c.currentVarSlot
 	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: funcSignature}
 	c.currentVarSlot++
@@ -118,7 +120,7 @@ func (c *FunctionContext) AddConstant(value Value) int {
 	return len(c.constants) - 1
 }
 
-func (c *FunctionContext) AddParam(param *Type) {
+func (c *FunctionContext) AddParam(param *ast.Type) {
 	c.params = append(c.params, param)
 }
 
@@ -136,10 +138,10 @@ func (c *FunctionContext) Parent() Context {
 	return c.parent
 }
 
-func (c *FunctionContext) ReturnType() *Type {
+func (c *FunctionContext) ReturnType() *ast.Type {
 	return c.returnType
 }
 
-func (c *FunctionContext) Params() []*Type {
+func (c *FunctionContext) Params() []*ast.Type {
 	return c.params
 }
