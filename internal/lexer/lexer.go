@@ -375,9 +375,9 @@ func punctuatorSubkind(ch byte) (PunctuatorSubkind, bool) {
 	case ':':
 		return Colon, true
 	case '[':
-		return ArrayOpen, true
+		return BracketOpen, true
 	case ']':
-		return ArrayClose, true
+		return BracketClose, true
 	}
 	return 0, false
 }

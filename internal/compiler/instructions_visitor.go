@@ -274,7 +274,7 @@ func (v *InstructionsVisitor) VisitArrayLiteral(n *ast.ArrayLiteral) any {
 		}
 	}
 	reg := v.nextReg()
-	v.context.AddInstruction(InstrArrayMake(reg, elements))
+	v.context.AddInstruction(InstrMakeArray(reg, elements))
 	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeArrayOf(typeOf)}
 }
 
@@ -420,6 +420,31 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 	resultReg := v.nextReg()
 	v.context.AddInstruction(InstrCall(resultReg, resultVisitExpr.Reg, args))
 	return &VisitExprResult{Reg: resultReg, TypeOf: resultVisitExpr.FuncSignature.ReturnType}
+}
+
+func (v *InstructionsVisitor) VisitIndexExpr(n *ast.IndexExpr) any {
+	arrayResult := n.Array.Visit(v)
+	arrayVisitExpr, ok := CastVisitExprResult(arrayResult)
+	if !ok {
+		return nil
+	}
+	indexResult := n.Index.Visit(v)
+	indexVisitExpr, ok := CastVisitExprResult(indexResult)
+	if !ok {
+		return nil
+	}
+
+	if arrayVisitExpr.TypeOf.Type != ast.TYPE_ARRAY {
+		v.addError(fmt.Sprintf("expression must be of type array, but got %s", arrayVisitExpr.TypeOf), n.Array.Pos())
+		return nil
+	}
+	if !indexVisitExpr.TypeOf.IsEqual(ast.TypeInt()) {
+		v.addError(fmt.Sprintf("index must be of type int, but got %s", indexVisitExpr.TypeOf), n.Index.Pos())
+		return nil
+	}
+	reg := v.nextReg()
+	v.context.AddInstruction(InstrIndexArray(reg, arrayVisitExpr.Reg, indexVisitExpr.Reg))
+	return &VisitExprResult{Reg: reg, TypeOf: arrayVisitExpr.TypeOf.ElementType}
 }
 
 func (v *InstructionsVisitor) VisitIf(n *ast.If) any {

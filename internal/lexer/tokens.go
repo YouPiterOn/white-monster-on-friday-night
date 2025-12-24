@@ -73,8 +73,8 @@ const (
 	StatementEnd
 	Comma
 	Colon
-	ArrayOpen
-	ArrayClose
+	BracketOpen
+	BracketClose
 )
 
 func (k PunctuatorSubkind) String() string {

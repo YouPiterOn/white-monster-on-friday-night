@@ -101,3 +101,17 @@ func (c *CallExpr) expressionNode()        {}
 func (c *CallExpr) Visit(v Visitor[any]) any {
 	return v.VisitCallExpr(c)
 }
+
+type IndexExpr struct {
+	Array       Expression
+	Index       Expression
+	PosAt       *common.SourcePos
+	IsStatement bool
+}
+
+func (i *IndexExpr) Pos() *common.SourcePos { return i.PosAt }
+func (i *IndexExpr) statementNode()         {}
+func (i *IndexExpr) expressionNode()        {}
+func (i *IndexExpr) Visit(v Visitor[any]) any {
+	return v.VisitIndexExpr(i)
+}

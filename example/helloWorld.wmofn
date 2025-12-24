@@ -8,7 +8,9 @@ a = 60;
 
 var b: []int = [1, 2, 3];
 
-append(b, 4);
+b = append(b, 4);
+
+println(b[3]);
 
 function addToA(other: int): int {
   return (a + 0) + other;
