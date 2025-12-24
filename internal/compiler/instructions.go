@@ -42,6 +42,7 @@ const (
 	RETURN
 	JUMP_IF_FALSE
 	JUMP
+	ARRAY_MAKE
 )
 
 func (o OpCode) String() string {
@@ -72,6 +73,7 @@ func (o OpCode) String() string {
 		"RETURN",
 		"JUMP_IF_FALSE",
 		"JUMP",
+		"ARRAY_MAKE",
 	}[o]
 }
 
@@ -261,5 +263,12 @@ func InstrJump(target int) Instruction {
 	return Instruction{
 		OpCode: JUMP,
 		Args:   []int{target},
+	}
+}
+
+func InstrArrayMake(resultReg int, elements []int) Instruction {
+	return Instruction{
+		OpCode: ARRAY_MAKE,
+		Args:   append([]int{resultReg}, elements...),
 	}
 }

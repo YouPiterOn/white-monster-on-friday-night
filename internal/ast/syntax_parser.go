@@ -616,6 +616,10 @@ func (p *Parser) ParseAtomExpr(isStatement bool) Expression {
 		return p.ParseNullLiteral(isStatement)
 	}
 
+	if t.Kind == lexer.Punctuator && t.Subkind == lexer.ArrayOpen {
+		return p.ParseArrayLiteral()
+	}
+
 	if t.Kind == lexer.Identifier {
 		lparen := p.peek(1)
 		if lparen != nil && lparen.Kind == lexer.Punctuator && lparen.Subkind == lexer.ParenOpen {
@@ -713,6 +717,38 @@ func (p *Parser) ParseCallExpr() *CallExpr {
 		return nil
 	}
 	return &CallExpr{Identifier: *identifier, Arguments: arguments, PosAt: lparen.Pos}
+}
+
+func (p *Parser) ParseArrayLiteral() *ArrayLiteral {
+	lparen := p.eatExpected(lexer.Punctuator, lexer.ArrayOpen, "expected '['")
+	if lparen == nil {
+		return nil
+	}
+	elements := []Expression{}
+	for {
+		t := p.peek(0)
+		if t == nil {
+			return nil
+		}
+		if t.Kind == lexer.Punctuator && t.Subkind == lexer.ArrayClose {
+			break
+		}
+		element := p.ParseExpression(false)
+		if element == nil {
+			return nil
+		}
+		elements = append(elements, element)
+		commaTok := p.peek(0)
+		if commaTok == nil || !(commaTok.Kind == lexer.Punctuator && commaTok.Subkind == lexer.Comma) {
+			break
+		}
+		p.eat()
+	}
+	rparen := p.eatExpected(lexer.Punctuator, lexer.ArrayClose, "expected ']'")
+	if rparen == nil {
+		return nil
+	}
+	return &ArrayLiteral{Elements: elements, PosAt: lparen.Pos}
 }
 
 func atoi(s string) int {

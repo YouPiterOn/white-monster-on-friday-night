@@ -253,6 +253,31 @@ func (v *InstructionsVisitor) VisitNullLiteral(n *ast.NullLiteral) any {
 	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeNull()}
 }
 
+func (v *InstructionsVisitor) VisitArrayLiteral(n *ast.ArrayLiteral) any {
+	if n.IsStatement {
+		return nil
+	}
+	elements := []int{}
+	var typeOf *ast.Type
+	for _, element := range n.Elements {
+		elementResult := element.Visit(v)
+		elementVisitExpr, ok := CastVisitExprResult(elementResult)
+		if !ok {
+			return nil
+		}
+		elements = append(elements, elementVisitExpr.Reg)
+		if typeOf == nil {
+			typeOf = elementVisitExpr.TypeOf
+		} else if !typeOf.IsEqual(elementVisitExpr.TypeOf) {
+			v.addError(fmt.Sprintf("array elements must be of type %s, but got %s", typeOf, elementVisitExpr.TypeOf), element.Pos())
+			return nil
+		}
+	}
+	reg := v.nextReg()
+	v.context.AddInstruction(InstrArrayMake(reg, elements))
+	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeArrayOf(typeOf)}
+}
+
 func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 	if n.IsStatement {
 		return nil

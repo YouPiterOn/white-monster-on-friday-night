@@ -44,6 +44,13 @@ func (v *VM) initStdlibValues(gt *compiler.GlobalTable) {
 			Native: native.Println,
 		}
 	}
+	// append
+	if variable, ok := gt.FindVariable("append"); ok {
+		v.globals[variable.Slot] = compiler.Value{
+			TypeOf: compiler.VAL_NATIVE_FUNCTION,
+			Native: native.Append,
+		}
+	}
 }
 
 func (v *VM) currentFrame() *Frame {
@@ -110,6 +117,8 @@ func (v *VM) runInstructions(instructions []compiler.Instruction) *compiler.Valu
 			v.opJumpIfFalse(instruction.Args)
 		case compiler.JUMP:
 			v.opJump(instruction.Args)
+		case compiler.ARRAY_MAKE:
+			v.opArrayMake(instruction.Args)
 		}
 		frame.AdvanceIp()
 	}
@@ -313,4 +322,14 @@ func (v *VM) opJumpIfFalse(args []int) {
 
 func (v *VM) opJump(args []int) {
 	v.currentFrame().SetIp(args[0])
+}
+
+func (v *VM) opArrayMake(args []int) {
+	elements := args[1:]
+	values := make([]compiler.Value, len(elements))
+	for i, element := range elements {
+		values[i] = *v.currentFrame().GetRegister(element)
+	}
+	result := compiler.Value{TypeOf: compiler.VAL_ARRAY, Array: values}
+	v.currentFrame().SetRegister(args[0], result)
 }

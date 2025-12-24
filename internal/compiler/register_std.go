@@ -13,4 +13,14 @@ func RegisterStdGlobals(gt *GlobalTable) {
 			Vararg:     false,
 		},
 	)
+	gt.DefineFunctionVariable(
+		"append",
+		false,
+		ast.TypeNativeFunction(),
+		&FuncSignature{
+			CallArgs:   []*ast.Type{ast.TypeArrayOf(ast.TypeInt()), ast.TypeInt()},
+			ReturnType: ast.TypeArrayOf(ast.TypeInt()),
+			Vararg:     false,
+		},
+	)
 }
