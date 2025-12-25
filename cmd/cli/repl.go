@@ -1,4 +1,4 @@
-package cli
+package main
 
 import (
 	"bufio"
@@ -35,7 +35,7 @@ func REPL() {
 			fmt.Println("Error parsing input:", parser.Errors)
 			continue
 		}
-		compileResult := compiler.CompileREPLChunk(program)
+		compileResult, _ := compiler.CompileREPLChunk(program)
 		retval := vm.RunModuleProto(&compileResult.ModuleProto)
 		fmt.Printf("retval: %d\n", retval)
 	}

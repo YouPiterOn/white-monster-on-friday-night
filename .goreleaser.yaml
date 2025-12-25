@@ -1,0 +1,30 @@
+version: 2
+project_name: white-monster-on-friday-night
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: cli
+    main: ./cmd/cli
+    binary: wmofn
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    name_template: "wmofn_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+# release:
+#   github:
+#     owner: youpiteron
+#     name: white-monster-on-friday-night

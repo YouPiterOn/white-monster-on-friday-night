@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-
-	"youpiteron.dev/white-monster-on-friday-night/internal/cli"
 )
 
 func main() {
@@ -18,9 +16,9 @@ func main() {
 			fmt.Println("usage: cli run <file>")
 			os.Exit(1)
 		}
-		cli.Run(os.Args[2])
+		Run(os.Args[2])
 	case "repl":
-		cli.REPL()
+		REPL()
 	default:
 		fmt.Println("usage: \n\tcli run <file>\n\tcli repl")
 		os.Exit(1)
