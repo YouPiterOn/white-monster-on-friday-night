@@ -293,21 +293,21 @@ func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 	}
 	reg := v.nextReg()
 	var typeOf *ast.Type
-	var callable *FuncSignature
+	var funcSignature *FuncSignature
 	if localVar != nil {
 		v.context.AddInstruction(InstrLoadVar(reg, localVar.Slot))
 		typeOf = localVar.TypeOf
-		callable = localVar.FuncSignature
+		funcSignature = localVar.FuncSignature
 	} else if upvar != nil {
 		v.context.AddInstruction(InstrLoadUpvar(reg, upvar.LocalSlot))
 		typeOf = upvar.TypeOf
-		callable = upvar.FuncSignature
+		funcSignature = upvar.FuncSignature
 	} else if globalVar != nil {
 		v.context.AddInstruction(InstrLoadGlobal(reg, globalVar.Slot))
 		typeOf = globalVar.TypeOf
-		callable = globalVar.FuncSignature
+		funcSignature = globalVar.FuncSignature
 	}
-	return &VisitExprResult{Reg: reg, TypeOf: typeOf, FuncSignature: callable}
+	return &VisitExprResult{Reg: reg, TypeOf: typeOf, FuncSignature: funcSignature}
 }
 
 func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
@@ -331,8 +331,12 @@ func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
 }
 
 func (v *InstructionsVisitor) VisitParam(n *ast.Param) any {
-	v.context.AddParam(n.TypeOf)
-	v.context.DefineVariable(n.Name, false, n.TypeOf)
+	typeOf := n.TypeOf
+	if n.Vararg {
+		typeOf = ast.TypeArrayOf(typeOf)
+	}
+	v.context.AddParam(typeOf)
+	v.context.DefineVariable(n.Name, false, typeOf)
 	return nil
 }
 
@@ -357,7 +361,7 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 
 	functionSlot := v.exitFunctionContext()
 
-	slot := v.context.DefineFunctionVariable(n.Name, false, ast.TypeClosure(), &FuncSignature{CallArgs: params, ReturnType: returnType})
+	slot := v.context.DefineFunctionVariable(n.Name, false, ast.TypeClosure(), &FuncSignature{CallArgs: params, ReturnType: returnType, Vararg: n.Vararg})
 	reg := v.nextReg()
 	v.context.AddInstruction(InstrClosure(reg, functionSlot))
 	v.context.AddInstruction(InstrStoreVar(reg, slot))
@@ -380,7 +384,7 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 		return nil
 	}
 	if !resultVisitExpr.TypeOf.IsEqual(ast.TypeClosure()) && !resultVisitExpr.TypeOf.IsEqual(ast.TypeNativeFunction()) {
-		v.addError(fmt.Sprintf("function call must be of type closure, but got %s", resultVisitExpr.TypeOf), n.Identifier.Pos())
+		v.addError(fmt.Sprintf("variable %s must be callable, but got type %s", n.Identifier.Name, resultVisitExpr.TypeOf), n.Identifier.Pos())
 		return nil
 	}
 	if resultVisitExpr.FuncSignature == nil {
@@ -388,32 +392,24 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 		return nil
 	}
 
-	args := []int{}
-	isError := false
-
-	if len(n.Arguments) != len(resultVisitExpr.FuncSignature.CallArgs) {
+	if len(n.Arguments) < len(resultVisitExpr.FuncSignature.CallArgs) {
 		v.addError(fmt.Sprintf("function %s takes %d arguments, but got %d", n.Identifier.Name, len(resultVisitExpr.FuncSignature.CallArgs), len(n.Arguments)), n.Identifier.Pos())
-		isError = true
+		return nil
+	} else if len(n.Arguments) > len(resultVisitExpr.FuncSignature.CallArgs) && !resultVisitExpr.FuncSignature.Vararg {
+		v.addError(fmt.Sprintf("function %s takes %d arguments, but got %d", n.Identifier.Name, len(resultVisitExpr.FuncSignature.CallArgs), len(n.Arguments)), n.Identifier.Pos())
+		return nil
 	}
 
-	for i, argument := range n.Arguments {
-		paramType := resultVisitExpr.FuncSignature.CallArgs[i]
+	args := []int{}
+	isOk := true
 
-		argumentResult := argument.Visit(v)
-		argumentVisitExpr, ok := CastVisitExprResult(argumentResult)
-		if !ok {
-			return nil
-		}
-
-		if !argumentVisitExpr.TypeOf.IsEqual(paramType) {
-			v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", i, paramType, argumentVisitExpr.TypeOf), argument.Pos())
-			isError = true
-			continue
-		}
-		args = append(args, argumentVisitExpr.Reg)
+	if resultVisitExpr.FuncSignature.Vararg {
+		args, isOk = v.handleArgsWithVararg(n.Arguments, resultVisitExpr.FuncSignature.CallArgs)
+	} else {
+		args, isOk = v.handleArgsWithoutVararg(n.Arguments, resultVisitExpr.FuncSignature.CallArgs)
 	}
 
-	if isError {
+	if !isOk {
 		return nil
 	}
 
@@ -479,4 +475,98 @@ func (v *InstructionsVisitor) VisitIf(n *ast.If) any {
 		v.context.SetInstruction(elseBodyIndex, InstrJump(endElseTarget))
 	}
 	return nil
+}
+
+func (v *InstructionsVisitor) handleArgsWithoutVararg(arguments []ast.Expression, callArgs []*ast.Type) ([]int, bool) {
+	args := []int{}
+	isOk := true
+
+	for i, argument := range arguments {
+		paramType := callArgs[i]
+
+		argumentResult := argument.Visit(v)
+		argumentVisitExpr, ok := CastVisitExprResult(argumentResult)
+		if !ok {
+			return nil, false
+		}
+
+		if !argumentVisitExpr.TypeOf.IsEqual(paramType) {
+			v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", i, paramType, argumentVisitExpr.TypeOf), argument.Pos())
+			isOk = false
+			continue
+		}
+		args = append(args, argumentVisitExpr.Reg)
+	}
+
+	return args, isOk
+}
+
+func (v *InstructionsVisitor) handleArgsWithVararg(arguments []ast.Expression, callArgs []*ast.Type) ([]int, bool) {
+	args := []int{}
+	isOk := true
+
+	for i, argument := range arguments {
+		if i >= len(callArgs)-1 {
+			break
+		}
+		paramType := callArgs[i]
+
+		argumentResult := argument.Visit(v)
+		argumentVisitExpr, ok := CastVisitExprResult(argumentResult)
+		if !ok {
+			return nil, false
+		}
+
+		if !argumentVisitExpr.TypeOf.IsEqual(paramType) {
+			v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", i, paramType, argumentVisitExpr.TypeOf), argument.Pos())
+			isOk = false
+			continue
+		}
+		args = append(args, argumentVisitExpr.Reg)
+	}
+
+	firstVarargIndex := len(callArgs) - 1
+	firstVararg := arguments[firstVarargIndex].Visit(v)
+	firstVarargVisitExpr, ok := CastVisitExprResult(firstVararg)
+	if !ok {
+		return nil, false
+	}
+
+	if firstVarargVisitExpr.TypeOf.IsEqual(callArgs[firstVarargIndex]) {
+		if len(callArgs)-1 > firstVarargIndex {
+			v.addError(fmt.Sprintf("can't pass more arguments after array argument at %d", firstVarargIndex), arguments[firstVarargIndex+1].Pos())
+		}
+		args = append(args, firstVarargVisitExpr.Reg)
+	} else {
+		varargRegs := []int{}
+		paramType := callArgs[len(callArgs)-1].ElementType
+
+		if !firstVarargVisitExpr.TypeOf.IsEqual(paramType) {
+			v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", firstVarargIndex, paramType, firstVarargVisitExpr.TypeOf), arguments[firstVarargIndex].Pos())
+			isOk = false
+		}
+		varargRegs = append(varargRegs, firstVarargVisitExpr.Reg)
+
+		for i := len(callArgs); i < len(arguments); i++ {
+			argument := arguments[i]
+			argumentResult := argument.Visit(v)
+			argumentVisitExpr, ok := CastVisitExprResult(argumentResult)
+			if !ok {
+				return nil, false
+			}
+			if !argumentVisitExpr.TypeOf.IsEqual(paramType) {
+				v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", i, paramType, argumentVisitExpr.TypeOf), argument.Pos())
+				isOk = false
+				continue
+			}
+			varargRegs = append(varargRegs, argumentVisitExpr.Reg)
+		}
+
+		reg := v.nextReg()
+		v.context.AddInstruction(InstrMakeArray(reg, varargRegs))
+
+		args = append(args, reg)
+	}
+
+	return args, isOk
 }

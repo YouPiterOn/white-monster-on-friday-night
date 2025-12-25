@@ -123,6 +123,7 @@ const (
 	OperatorLessEqual
 	OperatorAnd
 	OperatorOr
+	OperatorRest
 )
 
 func (k OperatorSubkind) String() string {
@@ -139,6 +140,7 @@ func (k OperatorSubkind) String() string {
 		"<=",
 		"&&",
 		"||",
+		"...",
 	}[k]
 }
 

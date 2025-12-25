@@ -159,14 +159,27 @@ func (p *Parser) ParseFunction() Statement {
 	}
 
 	params := []Param{}
+	vararg := false
 	for {
 		param := p.ParseParam()
 		if param == nil {
 			break
 		}
-		params = append(params, *param)
-		commaTok := p.peek(0)
-		if commaTok == nil || !(commaTok.Kind == lexer.Punctuator && commaTok.Subkind == lexer.Comma) {
+		t := p.peek(0)
+		if t == nil {
+			break
+		}
+		if t.Kind == lexer.Operator && t.Subkind == lexer.OperatorRest {
+			vararg = true
+			param.Vararg = true
+			p.eat()
+			params = append(params, *param)
+			break
+		} else {
+			params = append(params, *param)
+		}
+
+		if !(t.Kind == lexer.Punctuator && t.Subkind == lexer.Comma) {
 			break
 		}
 		p.eat()
@@ -185,7 +198,7 @@ func (p *Parser) ParseFunction() Statement {
 	}
 	body := p.ParseBody()
 
-	return &Function{Name: idTok.Lexeme, Params: params, Body: body, ReturnType: returnType, PosAt: kw.Pos}
+	return &Function{Name: idTok.Lexeme, Params: params, Vararg: vararg, Body: body, ReturnType: returnType, PosAt: kw.Pos}
 }
 
 func (p *Parser) ParseParam() *Param {
@@ -201,7 +214,7 @@ func (p *Parser) ParseParam() *Param {
 	if typeOf == nil {
 		return nil
 	}
-	return &Param{Name: idTok.Lexeme, TypeOf: typeOf, PosAt: idTok.Pos}
+	return &Param{Name: idTok.Lexeme, TypeOf: typeOf, PosAt: idTok.Pos, Vararg: false}
 }
 
 func (p *Parser) ParseBody() []Statement {

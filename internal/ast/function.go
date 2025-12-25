@@ -8,6 +8,7 @@ type Param struct {
 	Name   string
 	TypeOf *Type
 	PosAt  *common.SourcePos
+	Vararg bool
 }
 
 func (p *Param) Pos() *common.SourcePos { return p.PosAt }
@@ -18,6 +19,7 @@ func (p *Param) Visit(v Visitor[any]) any {
 type Function struct {
 	Name       string
 	Params     []Param
+	Vararg     bool
 	Body       []Statement
 	ReturnType *Type
 	PosAt      *common.SourcePos

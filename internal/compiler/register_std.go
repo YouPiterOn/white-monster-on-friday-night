@@ -8,9 +8,9 @@ func RegisterStdGlobals(gt *GlobalTable) {
 		false,
 		ast.TypeNativeFunction(),
 		&FuncSignature{
-			CallArgs:   []*ast.Type{ast.TypeInt()},
+			CallArgs:   []*ast.Type{ast.TypeArrayOf(ast.TypeInt())},
 			ReturnType: ast.TypeNull(),
-			Vararg:     false,
+			Vararg:     true,
 		},
 	)
 	gt.DefineFunctionVariable(
