@@ -165,16 +165,21 @@ func (p *Parser) ParseFunction() Statement {
 		if param == nil {
 			break
 		}
-		params = append(params, *param)
 		t := p.peek(0)
 		if t == nil {
 			break
 		}
 		if t.Kind == lexer.Operator && t.Subkind == lexer.OperatorRest {
 			vararg = true
+			param.Vararg = true
 			p.eat()
+			params = append(params, *param)
 			break
-		} else if !(t.Kind == lexer.Punctuator && t.Subkind == lexer.Comma) {
+		} else {
+			params = append(params, *param)
+		}
+
+		if !(t.Kind == lexer.Punctuator && t.Subkind == lexer.Comma) {
 			break
 		}
 		p.eat()
@@ -209,7 +214,7 @@ func (p *Parser) ParseParam() *Param {
 	if typeOf == nil {
 		return nil
 	}
-	return &Param{Name: idTok.Lexeme, TypeOf: typeOf, PosAt: idTok.Pos}
+	return &Param{Name: idTok.Lexeme, TypeOf: typeOf, PosAt: idTok.Pos, Vararg: false}
 }
 
 func (p *Parser) ParseBody() []Statement {

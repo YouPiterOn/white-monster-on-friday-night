@@ -10,7 +10,15 @@ var b: []int = [1, 2, 3];
 
 b = append(b, 4);
 
-println(b[3]);
+println(b[3], 3);
+
+function toArray(vararg: int...): []int {
+  return vararg;
+}
+
+b = toArray(1, 2, 3, 4, 5);
+
+println(b);
 
 function addToA(other: int): int {
   return (a + 0) + other;

@@ -8,6 +8,7 @@ type Param struct {
 	Name   string
 	TypeOf *Type
 	PosAt  *common.SourcePos
+	Vararg bool
 }
 
 func (p *Param) Pos() *common.SourcePos { return p.PosAt }

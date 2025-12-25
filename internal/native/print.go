@@ -9,18 +9,18 @@ import (
 
 func Println(vm api.VM, args ...compiler.Value) (compiler.Value, error) {
 	values := make([]any, 0, len(args))
-	for _, arg := range args {
-		switch arg.TypeOf {
+	for _, val := range args[0].Array {
+		switch val.TypeOf {
 		case compiler.VAL_INT:
-			values = append(values, arg.Int)
+			values = append(values, val.Int)
 		case compiler.VAL_BOOL:
-			values = append(values, arg.Bool)
+			values = append(values, val.Bool)
 		case compiler.VAL_NULL:
 			values = append(values, nil)
 		case compiler.VAL_CLOSURE:
-			values = append(values, arg.Closure.Proto.String())
+			values = append(values, val.Closure.Proto.String())
 		case compiler.VAL_NATIVE_FUNCTION:
-			values = append(values, arg.Native)
+			values = append(values, val.Native)
 		}
 	}
 
