@@ -13,7 +13,9 @@ type LexerState int
 const (
 	StateInitial LexerState = iota
 	StateIdentifier
-	StateNumber
+	StateInteger
+	StateFloat
+	StateString
 	StateOperator
 )
 
@@ -79,7 +81,7 @@ func (l *Lexer) Lex(input string) LexResult {
 
 			// number
 			if isDigit(ch) {
-				l.state = StateNumber
+				l.state = StateInteger
 				l.startPos = l.capturePos()
 				continue
 			}
@@ -120,13 +122,36 @@ func (l *Lexer) Lex(input string) LexResult {
 			l.startPos = nil
 			continue
 
-		case StateNumber:
+		case StateInteger:
 			if !l.eof() && isDigit(l.peek()) {
 				l.buf += string(l.next())
 				continue
 			}
 
-			if tok, err := l.flushNumber(); tok != nil {
+			if !l.eof() && l.peek() == '.' {
+				l.state = StateFloat
+				l.buf += string(l.next())
+				continue
+			}
+
+			if tok, err := l.flushInteger(); tok != nil {
+				tokens = append(tokens, *tok)
+			} else if err != nil {
+				errors = append(errors, *err)
+			}
+
+			l.state = StateInitial
+			l.buf = ""
+			l.startPos = nil
+			continue
+
+		case StateFloat:
+			if !l.eof() && isDigit(l.peek()) {
+				l.buf += string(l.next())
+				continue
+			}
+
+			if tok, err := l.flushFloat(); tok != nil {
 				tokens = append(tokens, *tok)
 			} else if err != nil {
 				errors = append(errors, *err)
@@ -163,8 +188,8 @@ func (l *Lexer) Lex(input string) LexResult {
 			} else if err != nil {
 				errors = append(errors, *err)
 			}
-		case StateNumber:
-			if tok, err := l.flushNumber(); tok != nil {
+		case StateInteger:
+			if tok, err := l.flushInteger(); tok != nil {
 				tokens = append(tokens, *tok)
 			} else if err != nil {
 				errors = append(errors, *err)
@@ -308,7 +333,7 @@ func (l *Lexer) flushOperator() (*Token, *common.Error) {
 	return nil, &common.Error{Message: fmt.Sprintf("invalid operator: %s", lex), Pos: &pos}
 }
 
-func (l *Lexer) flushNumber() (*Token, *common.Error) {
+func (l *Lexer) flushInteger() (*Token, *common.Error) {
 	if l.startPos == nil {
 		return nil, nil
 	}
@@ -320,6 +345,22 @@ func (l *Lexer) flushNumber() (*Token, *common.Error) {
 		Lexeme:  lex,
 		Kind:    Constant,
 		Subkind: Integer,
+		Pos:     &pos,
+	}, nil
+}
+
+func (l *Lexer) flushFloat() (*Token, *common.Error) {
+	if l.startPos == nil {
+		return nil, nil
+	}
+
+	lex := l.buf
+	pos := l.finishPos(*l.startPos, len(lex))
+
+	return &Token{
+		Lexeme:  lex,
+		Kind:    Constant,
+		Subkind: Float,
 		Pos:     &pos,
 	}, nil
 }
