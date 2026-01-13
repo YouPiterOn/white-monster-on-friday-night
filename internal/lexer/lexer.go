@@ -79,6 +79,14 @@ func (l *Lexer) Lex(input string) LexResult {
 				continue
 			}
 
+			// string
+			if isQuote(ch) {
+				l.state = StateString
+				l.startPos = l.capturePos()
+				l.next()
+				continue
+			}
+
 			// number
 			if isDigit(ch) {
 				l.state = StateInteger
@@ -156,6 +164,26 @@ func (l *Lexer) Lex(input string) LexResult {
 			} else if err != nil {
 				errors = append(errors, *err)
 			}
+
+			l.state = StateInitial
+			l.buf = ""
+			l.startPos = nil
+			continue
+
+		case StateString:
+			lastChar := l.buf[len(l.buf)-1]
+			if !l.eof() && !(isQuote(l.peek()) && lastChar != '\\') {
+				l.buf += string(l.next())
+				continue
+			}
+
+			if tok, err := l.flushString(); tok != nil {
+				tokens = append(tokens, *tok)
+			} else if err != nil {
+				errors = append(errors, *err)
+			}
+
+			l.next()
 
 			l.state = StateInitial
 			l.buf = ""
@@ -365,6 +393,22 @@ func (l *Lexer) flushFloat() (*Token, *common.Error) {
 	}, nil
 }
 
+func (l *Lexer) flushString() (*Token, *common.Error) {
+	if l.startPos == nil {
+		return nil, nil
+	}
+
+	lex := l.buf
+	pos := l.finishPos(*l.startPos, len(lex))
+
+	return &Token{
+		Lexeme:  lex,
+		Kind:    Constant,
+		Subkind: String,
+		Pos:     &pos,
+	}, nil
+}
+
 // ---------- Helpers ----------
 
 func isWs(ch byte) bool {
@@ -395,6 +439,10 @@ func isOperatorStart(ch byte) bool {
 
 func isOperatorContinue(ch byte) bool {
 	return ch == '=' || ch == '&' || ch == '|' || ch == '.'
+}
+
+func isQuote(ch byte) bool {
+	return ch == '"'
 }
 
 func punctuatorSubkind(ch byte) (PunctuatorSubkind, bool) {
