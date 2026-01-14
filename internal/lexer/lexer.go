@@ -456,8 +456,7 @@ func isQuote(ch byte) bool {
 
 func punctuatorSubkind(ch byte) (PunctuatorSubkind, bool) {
 	switch ch {
-	case '=':
-		return Assign, true
+	// assign '=' punctuator is handled in flushOperator
 	case '{':
 		return BlockStart, true
 	case '}':

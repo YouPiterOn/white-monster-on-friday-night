@@ -327,6 +327,7 @@ func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 		typeOf = globalVar.TypeOf
 		funcSignature = globalVar.FuncSignature
 	}
+	fmt.Printf("funcSignature: %v\n", funcSignature)
 	return &VisitExprResult{Reg: reg, TypeOf: typeOf, FuncSignature: funcSignature}
 }
 
@@ -372,16 +373,17 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 	for _, param := range n.Params {
 		param.Visit(v)
 	}
+
+	params := v.context.Params()
+	returnType := v.context.ReturnType()
+	slot := v.context.Parent().DefineFunctionVariable(n.Name, false, ast.TypeClosure(), &FuncSignature{CallArgs: params, ReturnType: returnType, Vararg: n.Vararg})
+
 	for _, statement := range n.Body {
 		statement.Visit(v)
 	}
 
-	params := v.context.Params()
-	returnType := v.context.ReturnType()
-
 	functionSlot := v.exitFunctionContext()
 
-	slot := v.context.DefineFunctionVariable(n.Name, false, ast.TypeClosure(), &FuncSignature{CallArgs: params, ReturnType: returnType, Vararg: n.Vararg})
 	reg := v.nextReg()
 	v.context.AddInstruction(InstrClosure(reg, functionSlot))
 	v.context.AddInstruction(InstrStoreVar(reg, slot))
