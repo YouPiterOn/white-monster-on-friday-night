@@ -81,28 +81,54 @@ func (v *VM) runInstructions(instructions []compiler.Instruction) *compiler.Valu
 			v.opAssignUpvar(instruction.Args)
 		case compiler.ADD_INT:
 			v.opAddInt(instruction.Args)
+		case compiler.ADD_FLOAT:
+			v.opAddFloat(instruction.Args)
+		case compiler.ADD_STRING:
+			v.opAddString(instruction.Args)
 		case compiler.SUB_INT:
 			v.opSubInt(instruction.Args)
+		case compiler.SUB_FLOAT:
+			v.opSubFloat(instruction.Args)
 		case compiler.MUL_INT:
 			v.opMulInt(instruction.Args)
+		case compiler.MUL_FLOAT:
+			v.opMulFloat(instruction.Args)
 		case compiler.DIV_INT:
 			v.opDivInt(instruction.Args)
+		case compiler.DIV_FLOAT:
+			v.opDivFloat(instruction.Args)
 		case compiler.EQ_INT:
 			v.opEqInt(instruction.Args)
+		case compiler.EQ_FLOAT:
+			v.opEqFloat(instruction.Args)
+		case compiler.EQ_STRING:
+			v.opEqString(instruction.Args)
 		case compiler.EQ_BOOL:
 			v.opEqBool(instruction.Args)
 		case compiler.NE_INT:
 			v.opNeInt(instruction.Args)
+		case compiler.NE_FLOAT:
+			v.opNeFloat(instruction.Args)
+		case compiler.NE_STRING:
+			v.opNeString(instruction.Args)
 		case compiler.NE_BOOL:
 			v.opNeBool(instruction.Args)
 		case compiler.GT_INT:
 			v.opGtInt(instruction.Args)
+		case compiler.GT_FLOAT:
+			v.opGtFloat(instruction.Args)
 		case compiler.GTE_INT:
 			v.opGteInt(instruction.Args)
+		case compiler.GTE_FLOAT:
+			v.opGteFloat(instruction.Args)
 		case compiler.LT_INT:
 			v.opLtInt(instruction.Args)
+		case compiler.LT_FLOAT:
+			v.opLtFloat(instruction.Args)
 		case compiler.LTE_INT:
 			v.opLteInt(instruction.Args)
+		case compiler.LTE_FLOAT:
+			v.opLteFloat(instruction.Args)
 		case compiler.AND_BOOL:
 			v.opAndBool(instruction.Args)
 		case compiler.OR_BOOL:
@@ -121,6 +147,8 @@ func (v *VM) runInstructions(instructions []compiler.Instruction) *compiler.Valu
 			v.opMakeArray(instruction.Args)
 		case compiler.INDEX_ARRAY:
 			v.opIndexArray(instruction.Args)
+		default:
+			panic(fmt.Sprintf("VM ERROR: unknown instruction %s", instruction.OpCode))
 		}
 		frame.AdvanceIp()
 	}
@@ -175,10 +203,31 @@ func (v *VM) opAddInt(args []int) {
 	v.currentFrame().SetRegister(args[0], result)
 }
 
+func (v *VM) opAddFloat(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_FLOAT, Float: left.Float + right.Float}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opAddString(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_STRING, String: left.String + right.String}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
 func (v *VM) opSubInt(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
 	result := compiler.Value{TypeOf: compiler.VAL_INT, Int: left.Int - right.Int}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opSubFloat(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_FLOAT, Float: left.Float - right.Float}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
@@ -189,6 +238,13 @@ func (v *VM) opMulInt(args []int) {
 	v.currentFrame().SetRegister(args[0], result)
 }
 
+func (v *VM) opMulFloat(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_FLOAT, Float: left.Float * right.Float}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
 func (v *VM) opDivInt(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
@@ -196,10 +252,31 @@ func (v *VM) opDivInt(args []int) {
 	v.currentFrame().SetRegister(args[0], result)
 }
 
+func (v *VM) opDivFloat(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_FLOAT, Float: left.Float / right.Float}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
 func (v *VM) opEqInt(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
 	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Int == right.Int}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opEqFloat(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Float == right.Float}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opEqString(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.String == right.String}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
@@ -217,6 +294,20 @@ func (v *VM) opNeInt(args []int) {
 	v.currentFrame().SetRegister(args[0], result)
 }
 
+func (v *VM) opNeFloat(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Float != right.Float}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opNeString(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.String != right.String}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
 func (v *VM) opNeBool(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
@@ -231,10 +322,24 @@ func (v *VM) opGtInt(args []int) {
 	v.currentFrame().SetRegister(args[0], result)
 }
 
+func (v *VM) opGtFloat(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Float > right.Float}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
 func (v *VM) opGteInt(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
 	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Int >= right.Int}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opGteFloat(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Float >= right.Float}
 	v.currentFrame().SetRegister(args[0], result)
 }
 
@@ -245,10 +350,24 @@ func (v *VM) opLtInt(args []int) {
 	v.currentFrame().SetRegister(args[0], result)
 }
 
+func (v *VM) opLtFloat(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Float < right.Float}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
 func (v *VM) opLteInt(args []int) {
 	left := v.currentFrame().GetRegister(args[1])
 	right := v.currentFrame().GetRegister(args[2])
 	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Int <= right.Int}
+	v.currentFrame().SetRegister(args[0], result)
+}
+
+func (v *VM) opLteFloat(args []int) {
+	left := v.currentFrame().GetRegister(args[1])
+	right := v.currentFrame().GetRegister(args[2])
+	result := compiler.Value{TypeOf: compiler.VAL_BOOL, Bool: left.Float <= right.Float}
 	v.currentFrame().SetRegister(args[0], result)
 }
 

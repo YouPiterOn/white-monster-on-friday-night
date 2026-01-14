@@ -6,6 +6,8 @@ type Visitor[R any] interface {
 	VisitAssignment(n *Assignment) R
 	VisitReturn(n *Return) R
 	VisitIntLiteral(n *IntLiteral) R
+	VisitFloatLiteral(n *FloatLiteral) R
+	VisitStringLiteral(n *StringLiteral) R
 	VisitBoolLiteral(n *BoolLiteral) R
 	VisitNullLiteral(n *NullLiteral) R
 	VisitArrayLiteral(n *ArrayLiteral) R

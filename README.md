@@ -23,7 +23,7 @@ the project is organized into several key components:
   - `var` declarations for mutable variables
   - `const` declarations for immutable constants
   - variable assignment
-  - type annotations (`int`, `bool`, `null`)
+  - type annotations (`int`, `float`, `string`, `bool`, `null`, `any`, `[]type` for arrays)
 
 - **scoping**
   - block scopes with `{ }`
@@ -32,31 +32,45 @@ the project is organized into several key components:
 - **functions**
   - function declarations with parameters and return types
   - function calls with arguments
+  - vararg support using rest operator (`...`) for variable-length arguments
   - closures with upvalue capture
   - return statements
-  - native functions (e.g., `println`)
+  - native functions (`println`, `append`)
 
 - **control flow**
   - `if/else` statements with conditional expressions
 
 - **expressions**
   - integer literals
+  - float literals
+  - string literals
   - boolean literals (`true`, `false`)
   - null literals
+  - array literals with `[ ]` syntax
+  - array indexing with `[index]` syntax
   - binary operators: `+`, `-`, `*`, `/`, `==`, `!=`, `>`, `>=`, `<`, `<=`, `&&`, `||`
+    - arithmetic operators work with `int` and `float` types
+    - string concatenation with `+` operator
+    - comparison operators work with `int`, `float`, `string`, and `bool` types
   - identifier references
   - function call expressions
   - statement expression optimization (pure expressions as statements are optimized away)
 
 - **types**
   - `int` - integer values
+  - `float` - floating-point values
+  - `string` - string values
   - `bool` - boolean values
   - `null` - null value
+  - `any` - accepts any type (for flexible typing)
+  - `[]type` - array types (e.g., `[]int`, `[]string`)
   - function types (closures and native functions)
 
 ### example
 
 ```javascript
+println("Hello, World!");
+
 var a = 20;
 a = 60;
 
@@ -65,6 +79,8 @@ a = 60;
 }
 
 const b: int = 123;
+const pi: float = 3.14159;
+const message: string = "hello";
 
 function addToA(other: int): int {
   return (a + 0) + other;
@@ -74,17 +90,26 @@ function lessThenA(other: int): bool {
   return other < a;
 }
 
-1 + 1
-
-println(1)
-
-1 + println(1)
-
-if (lessThenA(69)) {
-  return a;
-} else {
-  return addToA(42);
+function greet(name: string): string {
+  return "hello, " + name;
 }
+
+var arr: []int = [1, 2, 3];
+var first = arr[0];
+arr = append(arr, 4);
+
+1 + 1
+3.14 + 2.86
+"hello" + " " + "world"
+
+function factorial(n: int): int {
+  if(n == 1) {
+    return n;
+  }
+  return n * factorial(n - 1);
+}
+
+return factorial(5);
 ```
 
 ## usage
@@ -92,7 +117,13 @@ if (lessThenA(69)) {
 run a `.wmofn` file using the `run` command:
 
 ```bash
-go run cmd/run/main.go example/helloWorld.wmofn
+go run cmd/cli/main.go run example/helloWorld.wmofn
+```
+
+or start an interactive repl:
+
+```bash
+go run cmd/cli/main.go repl
 ```
 
 ## planned features

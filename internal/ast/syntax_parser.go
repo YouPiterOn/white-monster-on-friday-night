@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"strconv"
 
 	"youpiteron.dev/white-monster-on-friday-night/internal/common"
 	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
@@ -621,6 +622,14 @@ func (p *Parser) ParseAtomExpr(isStatement bool) Expression {
 		return p.ParseIntLiteral(isStatement)
 	}
 
+	if t.Kind == lexer.Constant && t.Subkind == lexer.Float {
+		return p.ParseFloatLiteral(isStatement)
+	}
+
+	if t.Kind == lexer.Constant && t.Subkind == lexer.String {
+		return p.ParseStringLiteral(isStatement)
+	}
+
 	if t.Kind == lexer.Constant && t.Subkind == lexer.Boolean {
 		return p.ParseBoolLiteral(isStatement)
 	}
@@ -662,6 +671,30 @@ func (p *Parser) ParseIntLiteral(isStatement bool) *IntLiteral {
 		PosAt:       t.Pos,
 		IsStatement: isStatement,
 	}
+}
+
+func (p *Parser) ParseFloatLiteral(isStatement bool) *FloatLiteral {
+	t := p.eat()
+	if t == nil {
+		return nil
+	}
+
+	value, err := strconv.ParseFloat(t.Lexeme, 64)
+	if err != nil {
+		p.addError(fmt.Sprintf("invalid float literal: %s", t.Lexeme), t.Pos)
+		return nil
+	}
+
+	return &FloatLiteral{Value: value, PosAt: t.Pos, IsStatement: isStatement}
+}
+
+func (p *Parser) ParseStringLiteral(isStatement bool) *StringLiteral {
+	t := p.eat()
+	if t == nil {
+		return nil
+	}
+
+	return &StringLiteral{Value: t.Lexeme, PosAt: t.Pos, IsStatement: isStatement}
 }
 
 func (p *Parser) ParseBoolLiteral(isStatement bool) *BoolLiteral {

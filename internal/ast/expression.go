@@ -23,6 +23,32 @@ func (n *IntLiteral) Visit(v Visitor[any]) any {
 	return v.VisitIntLiteral(n)
 }
 
+type FloatLiteral struct {
+	Value       float64
+	PosAt       *common.SourcePos
+	IsStatement bool
+}
+
+func (f *FloatLiteral) Pos() *common.SourcePos { return f.PosAt }
+func (f *FloatLiteral) statementNode()         {}
+func (f *FloatLiteral) expressionNode()        {}
+func (f *FloatLiteral) Visit(v Visitor[any]) any {
+	return v.VisitFloatLiteral(f)
+}
+
+type StringLiteral struct {
+	Value       string
+	PosAt       *common.SourcePos
+	IsStatement bool
+}
+
+func (s *StringLiteral) Pos() *common.SourcePos { return s.PosAt }
+func (s *StringLiteral) statementNode()         {}
+func (s *StringLiteral) expressionNode()        {}
+func (s *StringLiteral) Visit(v Visitor[any]) any {
+	return v.VisitStringLiteral(s)
+}
+
 type BoolLiteral struct {
 	Value       bool
 	PosAt       *common.SourcePos

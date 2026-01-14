@@ -66,12 +66,13 @@ func (c *FunctionContext) FindUpvar(name string) (*Upvar, bool) {
 	parentLocal, ok := c.parent.FindLocalVariable(name)
 	if ok {
 		upvar := Upvar{
-			Name:         name,
-			Mutable:      parentLocal.Mutable,
-			LocalSlot:    c.currentUpvarSlot,
-			SlotInParent: parentLocal.Slot,
-			IsFromParent: true,
-			TypeOf:       parentLocal.TypeOf,
+			Name:          name,
+			Mutable:       parentLocal.Mutable,
+			LocalSlot:     c.currentUpvarSlot,
+			SlotInParent:  parentLocal.Slot,
+			IsFromParent:  true,
+			TypeOf:        parentLocal.TypeOf,
+			FuncSignature: parentLocal.FuncSignature,
 		}
 		c.upvarsMap[name] = upvar
 		c.currentUpvarSlot++

@@ -8,8 +8,8 @@ func RegisterStdGlobals(gt *GlobalTable) {
 		false,
 		ast.TypeNativeFunction(),
 		&FuncSignature{
-			CallArgs:   []*ast.Type{ast.TypeArrayOf(ast.TypeInt())},
-			ReturnType: ast.TypeNull(),
+			CallArgs:   []*ast.Type{ast.TypeArrayOf(ast.TypeAny())},
+			ReturnType: ast.TypeVoid(),
 			Vararg:     true,
 		},
 	)

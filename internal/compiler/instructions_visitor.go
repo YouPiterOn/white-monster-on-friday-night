@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"slices"
 
 	"youpiteron.dev/white-monster-on-friday-night/internal/ast"
 	"youpiteron.dev/white-monster-on-friday-night/internal/common"
@@ -233,6 +234,26 @@ func (v *InstructionsVisitor) VisitIntLiteral(n *ast.IntLiteral) any {
 	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeInt()}
 }
 
+func (v *InstructionsVisitor) VisitFloatLiteral(n *ast.FloatLiteral) any {
+	if n.IsStatement {
+		return nil
+	}
+	reg := v.nextReg()
+	constIndex := v.context.AddConstant(NewFloatValue(n.Value))
+	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
+	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeFloat()}
+}
+
+func (v *InstructionsVisitor) VisitStringLiteral(n *ast.StringLiteral) any {
+	if n.IsStatement {
+		return nil
+	}
+	reg := v.nextReg()
+	constIndex := v.context.AddConstant(NewStringValue(n.Value))
+	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
+	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeString()}
+}
+
 func (v *InstructionsVisitor) VisitBoolLiteral(n *ast.BoolLiteral) any {
 	if n.IsStatement {
 		return nil
@@ -307,6 +328,7 @@ func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 		typeOf = globalVar.TypeOf
 		funcSignature = globalVar.FuncSignature
 	}
+	fmt.Printf("funcSignature: %v\n", funcSignature)
 	return &VisitExprResult{Reg: reg, TypeOf: typeOf, FuncSignature: funcSignature}
 }
 
@@ -352,16 +374,17 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 	for _, param := range n.Params {
 		param.Visit(v)
 	}
+
+	params := v.context.Params()
+	returnType := v.context.ReturnType()
+	slot := v.context.Parent().DefineFunctionVariable(n.Name, false, ast.TypeClosure(), &FuncSignature{CallArgs: params, ReturnType: returnType, Vararg: n.Vararg})
+
 	for _, statement := range n.Body {
 		statement.Visit(v)
 	}
 
-	params := v.context.Params()
-	returnType := v.context.ReturnType()
-
 	functionSlot := v.exitFunctionContext()
 
-	slot := v.context.DefineFunctionVariable(n.Name, false, ast.TypeClosure(), &FuncSignature{CallArgs: params, ReturnType: returnType, Vararg: n.Vararg})
 	reg := v.nextReg()
 	v.context.AddInstruction(InstrClosure(reg, functionSlot))
 	v.context.AddInstruction(InstrStoreVar(reg, slot))
@@ -383,7 +406,7 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 	if !ok {
 		return nil
 	}
-	if !resultVisitExpr.TypeOf.IsEqual(ast.TypeClosure()) && !resultVisitExpr.TypeOf.IsEqual(ast.TypeNativeFunction()) {
+	if !typecheck(resultVisitExpr.TypeOf, ast.TypeClosure(), ast.TypeNativeFunction()) {
 		v.addError(fmt.Sprintf("variable %s must be callable, but got type %s", n.Identifier.Name, resultVisitExpr.TypeOf), n.Identifier.Pos())
 		return nil
 	}
@@ -490,7 +513,7 @@ func (v *InstructionsVisitor) handleArgsWithoutVararg(arguments []ast.Expression
 			return nil, false
 		}
 
-		if !argumentVisitExpr.TypeOf.IsEqual(paramType) {
+		if !typecheck(argumentVisitExpr.TypeOf, paramType) {
 			v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", i, paramType, argumentVisitExpr.TypeOf), argument.Pos())
 			isOk = false
 			continue
@@ -517,7 +540,7 @@ func (v *InstructionsVisitor) handleArgsWithVararg(arguments []ast.Expression, c
 			return nil, false
 		}
 
-		if !argumentVisitExpr.TypeOf.IsEqual(paramType) {
+		if !typecheck(argumentVisitExpr.TypeOf, paramType) {
 			v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", i, paramType, argumentVisitExpr.TypeOf), argument.Pos())
 			isOk = false
 			continue
@@ -532,7 +555,7 @@ func (v *InstructionsVisitor) handleArgsWithVararg(arguments []ast.Expression, c
 		return nil, false
 	}
 
-	if firstVarargVisitExpr.TypeOf.IsEqual(callArgs[firstVarargIndex]) {
+	if typecheck(firstVarargVisitExpr.TypeOf, callArgs[firstVarargIndex]) {
 		if len(callArgs)-1 > firstVarargIndex {
 			v.addError(fmt.Sprintf("can't pass more arguments after array argument at %d", firstVarargIndex), arguments[firstVarargIndex+1].Pos())
 		}
@@ -541,7 +564,7 @@ func (v *InstructionsVisitor) handleArgsWithVararg(arguments []ast.Expression, c
 		varargRegs := []int{}
 		paramType := callArgs[len(callArgs)-1].ElementType
 
-		if !firstVarargVisitExpr.TypeOf.IsEqual(paramType) {
+		if !typecheck(firstVarargVisitExpr.TypeOf, paramType) {
 			v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", firstVarargIndex, paramType, firstVarargVisitExpr.TypeOf), arguments[firstVarargIndex].Pos())
 			isOk = false
 		}
@@ -554,7 +577,7 @@ func (v *InstructionsVisitor) handleArgsWithVararg(arguments []ast.Expression, c
 			if !ok {
 				return nil, false
 			}
-			if !argumentVisitExpr.TypeOf.IsEqual(paramType) {
+			if !typecheck(argumentVisitExpr.TypeOf, paramType) {
 				v.addError(fmt.Sprintf("argument %d must be of type %s, but got %s", i, paramType, argumentVisitExpr.TypeOf), argument.Pos())
 				isOk = false
 				continue
@@ -569,4 +592,14 @@ func (v *InstructionsVisitor) handleArgsWithVararg(arguments []ast.Expression, c
 	}
 
 	return args, isOk
+}
+
+func typecheck(actual *ast.Type, expected ...*ast.Type) bool {
+	if slices.ContainsFunc(expected, actual.IsEqual) {
+		return true
+	}
+	if slices.ContainsFunc(expected, ast.TypeAny().IsEqual) {
+		return true
+	}
+	return false
 }

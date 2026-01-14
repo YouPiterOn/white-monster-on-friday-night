@@ -13,6 +13,10 @@ func Println(vm api.VM, args ...compiler.Value) (compiler.Value, error) {
 		switch val.TypeOf {
 		case compiler.VAL_INT:
 			values = append(values, val.Int)
+		case compiler.VAL_FLOAT:
+			values = append(values, val.Float)
+		case compiler.VAL_STRING:
+			values = append(values, val.String)
 		case compiler.VAL_BOOL:
 			values = append(values, val.Bool)
 		case compiler.VAL_NULL:

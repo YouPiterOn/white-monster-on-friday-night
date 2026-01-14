@@ -96,13 +96,17 @@ type ConstantSubkind int
 
 const (
 	Integer ConstantSubkind = iota
+	Float
+	String
 	Boolean
 	Null
 )
 
 func (k ConstantSubkind) String() string {
 	return [...]string{
-		"numeric",
+		"integer",
+		"float",
+		"string",
 		"boolean",
 		"null",
 	}[k]
@@ -149,14 +153,20 @@ type TypeSubkind int
 const (
 	TypeInt TypeSubkind = iota
 	TypeBool
+	TypeFloat
+	TypeString
 	TypeNull
+	TypeVoid
 )
 
 func (k TypeSubkind) String() string {
 	return [...]string{
 		"int",
+		"float",
+		"string",
 		"bool",
 		"null",
+		"void",
 	}[k]
 }
 

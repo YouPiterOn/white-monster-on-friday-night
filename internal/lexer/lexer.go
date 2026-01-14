@@ -13,7 +13,9 @@ type LexerState int
 const (
 	StateInitial LexerState = iota
 	StateIdentifier
-	StateNumber
+	StateInteger
+	StateFloat
+	StateString
 	StateOperator
 )
 
@@ -77,9 +79,17 @@ func (l *Lexer) Lex(input string) LexResult {
 				continue
 			}
 
+			// string
+			if isQuote(ch) {
+				l.state = StateString
+				l.startPos = l.capturePos()
+				l.next()
+				continue
+			}
+
 			// number
 			if isDigit(ch) {
-				l.state = StateNumber
+				l.state = StateInteger
 				l.startPos = l.capturePos()
 				continue
 			}
@@ -120,18 +130,70 @@ func (l *Lexer) Lex(input string) LexResult {
 			l.startPos = nil
 			continue
 
-		case StateNumber:
+		case StateInteger:
 			if !l.eof() && isDigit(l.peek()) {
 				l.buf += string(l.next())
 				continue
 			}
 
-			if tok, err := l.flushNumber(); tok != nil {
+			if !l.eof() && l.peek() == '.' {
+				l.state = StateFloat
+				l.buf += string(l.next())
+				continue
+			}
+
+			if tok, err := l.flushInteger(); tok != nil {
 				tokens = append(tokens, *tok)
 			} else if err != nil {
 				errors = append(errors, *err)
 			}
 
+			l.state = StateInitial
+			l.buf = ""
+			l.startPos = nil
+			continue
+
+		case StateFloat:
+			if !l.eof() && isDigit(l.peek()) {
+				l.buf += string(l.next())
+				continue
+			}
+
+			if tok, err := l.flushFloat(); tok != nil {
+				tokens = append(tokens, *tok)
+			} else if err != nil {
+				errors = append(errors, *err)
+			}
+
+			l.state = StateInitial
+			l.buf = ""
+			l.startPos = nil
+			continue
+
+		case StateString:
+			if l.eof() {
+				pos := l.finishPos(*l.startPos, len(l.buf))
+				errors = append(errors, common.Error{
+					Message: "Unexpected end of input: unterminated string literal",
+					Pos:     &pos,
+				})
+				l.state = StateInitial
+				l.buf = ""
+				l.startPos = nil
+				continue
+			}
+
+			if (len(l.buf) > 0 && l.buf[len(l.buf)-1] == '\\') || !isQuote(l.peek()) {
+				l.buf += string(l.next())
+				continue
+			}
+
+			if tok, err := l.flushString(); tok != nil {
+				tokens = append(tokens, *tok)
+			} else if err != nil {
+				errors = append(errors, *err)
+			}
+			l.next()
 			l.state = StateInitial
 			l.buf = ""
 			l.startPos = nil
@@ -163,8 +225,8 @@ func (l *Lexer) Lex(input string) LexResult {
 			} else if err != nil {
 				errors = append(errors, *err)
 			}
-		case StateNumber:
-			if tok, err := l.flushNumber(); tok != nil {
+		case StateInteger:
+			if tok, err := l.flushInteger(); tok != nil {
 				tokens = append(tokens, *tok)
 			} else if err != nil {
 				errors = append(errors, *err)
@@ -308,7 +370,7 @@ func (l *Lexer) flushOperator() (*Token, *common.Error) {
 	return nil, &common.Error{Message: fmt.Sprintf("invalid operator: %s", lex), Pos: &pos}
 }
 
-func (l *Lexer) flushNumber() (*Token, *common.Error) {
+func (l *Lexer) flushInteger() (*Token, *common.Error) {
 	if l.startPos == nil {
 		return nil, nil
 	}
@@ -320,6 +382,38 @@ func (l *Lexer) flushNumber() (*Token, *common.Error) {
 		Lexeme:  lex,
 		Kind:    Constant,
 		Subkind: Integer,
+		Pos:     &pos,
+	}, nil
+}
+
+func (l *Lexer) flushFloat() (*Token, *common.Error) {
+	if l.startPos == nil {
+		return nil, nil
+	}
+
+	lex := l.buf
+	pos := l.finishPos(*l.startPos, len(lex))
+
+	return &Token{
+		Lexeme:  lex,
+		Kind:    Constant,
+		Subkind: Float,
+		Pos:     &pos,
+	}, nil
+}
+
+func (l *Lexer) flushString() (*Token, *common.Error) {
+	if l.startPos == nil {
+		return nil, nil
+	}
+
+	lex := l.buf
+	pos := l.finishPos(*l.startPos, len(lex))
+
+	return &Token{
+		Lexeme:  lex,
+		Kind:    Constant,
+		Subkind: String,
 		Pos:     &pos,
 	}, nil
 }
@@ -356,10 +450,13 @@ func isOperatorContinue(ch byte) bool {
 	return ch == '=' || ch == '&' || ch == '|' || ch == '.'
 }
 
+func isQuote(ch byte) bool {
+	return ch == '"'
+}
+
 func punctuatorSubkind(ch byte) (PunctuatorSubkind, bool) {
 	switch ch {
-	case '=':
-		return Assign, true
+	// assign '=' punctuator is handled in flushOperator
 	case '{':
 		return BlockStart, true
 	case '}':
