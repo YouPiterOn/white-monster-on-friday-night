@@ -10,6 +10,8 @@ type TypeEnum int
 
 const (
 	TYPE_INT TypeEnum = iota
+	TYPE_FLOAT
+	TYPE_STRING
 	TYPE_BOOL
 	TYPE_NULL
 	TYPE_VOID
@@ -21,6 +23,8 @@ const (
 func (t TypeEnum) String() string {
 	return [...]string{
 		"int",
+		"float",
+		"string",
 		"bool",
 		"null",
 		"void",
@@ -37,6 +41,8 @@ type Type struct {
 
 var primitiveTypes = map[TypeEnum]*Type{
 	TYPE_INT:             {Type: TYPE_INT},
+	TYPE_FLOAT:           {Type: TYPE_FLOAT},
+	TYPE_STRING:          {Type: TYPE_STRING},
 	TYPE_BOOL:            {Type: TYPE_BOOL},
 	TYPE_NULL:            {Type: TYPE_NULL},
 	TYPE_VOID:            {Type: TYPE_VOID},
@@ -46,6 +52,14 @@ var primitiveTypes = map[TypeEnum]*Type{
 
 func TypeInt() *Type {
 	return primitiveTypes[TYPE_INT]
+}
+
+func TypeFloat() *Type {
+	return primitiveTypes[TYPE_FLOAT]
+}
+
+func TypeString() *Type {
+	return primitiveTypes[TYPE_STRING]
 }
 
 func TypeBool() *Type {
@@ -76,10 +90,16 @@ func TypeFromTypeSubkind(typeSubkind lexer.TypeSubkind) *Type {
 	switch typeSubkind {
 	case lexer.TypeInt:
 		return TypeInt()
+	case lexer.TypeFloat:
+		return TypeFloat()
+	case lexer.TypeString:
+		return TypeString()
 	case lexer.TypeBool:
 		return TypeBool()
 	case lexer.TypeNull:
 		return TypeNull()
+	case lexer.TypeVoid:
+		return TypeVoid()
 	default:
 		panic(fmt.Sprintf("invalid type subkind %s", typeSubkind.String()))
 	}

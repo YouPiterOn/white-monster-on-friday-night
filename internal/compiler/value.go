@@ -11,6 +11,8 @@ type ValueType int
 
 const (
 	VAL_INT ValueType = iota
+	VAL_FLOAT
+	VAL_STRING
 	VAL_BOOL
 	VAL_CLOSURE
 	VAL_NULL
@@ -21,6 +23,8 @@ const (
 func (t ValueType) String() string {
 	return [...]string{
 		"INT",
+		"FLOAT",
+		"STRING",
 		"BOOL",
 		"CLOSURE",
 		"NULL",
@@ -32,6 +36,8 @@ func (t ValueType) String() string {
 type Value struct {
 	TypeOf  ValueType
 	Int     int
+	Float   float64
+	String  string
 	Bool    bool
 	Closure Closure
 	Native  NativeFunction
@@ -40,6 +46,14 @@ type Value struct {
 
 func NewIntValue(value int) Value {
 	return Value{TypeOf: VAL_INT, Int: value}
+}
+
+func NewFloatValue(value float64) Value {
+	return Value{TypeOf: VAL_FLOAT, Float: value}
+}
+
+func NewStringValue(value string) Value {
+	return Value{TypeOf: VAL_STRING, String: value}
 }
 
 func NewBoolValue(value bool) Value {

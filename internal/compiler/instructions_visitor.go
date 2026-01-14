@@ -233,6 +233,26 @@ func (v *InstructionsVisitor) VisitIntLiteral(n *ast.IntLiteral) any {
 	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeInt()}
 }
 
+func (v *InstructionsVisitor) VisitFloatLiteral(n *ast.FloatLiteral) any {
+	if n.IsStatement {
+		return nil
+	}
+	reg := v.nextReg()
+	constIndex := v.context.AddConstant(NewFloatValue(n.Value))
+	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
+	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeFloat()}
+}
+
+func (v *InstructionsVisitor) VisitStringLiteral(n *ast.StringLiteral) any {
+	if n.IsStatement {
+		return nil
+	}
+	reg := v.nextReg()
+	constIndex := v.context.AddConstant(NewStringValue(n.Value))
+	v.context.AddInstruction(InstrLoadConst(reg, constIndex))
+	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeString()}
+}
+
 func (v *InstructionsVisitor) VisitBoolLiteral(n *ast.BoolLiteral) any {
 	if n.IsStatement {
 		return nil

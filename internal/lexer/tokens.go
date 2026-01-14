@@ -153,7 +153,10 @@ type TypeSubkind int
 const (
 	TypeInt TypeSubkind = iota
 	TypeBool
+	TypeFloat
+	TypeString
 	TypeNull
+	TypeVoid
 )
 
 func (k TypeSubkind) String() string {

@@ -36,7 +36,9 @@ func REPL() {
 			continue
 		}
 		compileResult, _ := compiler.CompileREPLChunk(program)
-		retval := vm.RunModuleProto(&compileResult.ModuleProto)
-		fmt.Printf("retval: %d\n", retval)
+		if compileResult != nil {
+			retval := vm.RunModuleProto(&compileResult.ModuleProto)
+			fmt.Printf("retval: %d\n", retval)
+		}
 	}
 }

@@ -171,8 +171,19 @@ func (l *Lexer) Lex(input string) LexResult {
 			continue
 
 		case StateString:
-			lastChar := l.buf[len(l.buf)-1]
-			if !l.eof() && !(isQuote(l.peek()) && lastChar != '\\') {
+			if l.eof() {
+				pos := l.finishPos(*l.startPos, len(l.buf))
+				errors = append(errors, common.Error{
+					Message: "Unexpected end of input: unterminated string literal",
+					Pos:     &pos,
+				})
+				l.state = StateInitial
+				l.buf = ""
+				l.startPos = nil
+				continue
+			}
+
+			if (len(l.buf) > 0 && l.buf[len(l.buf)-1] == '\\') || !isQuote(l.peek()) {
 				l.buf += string(l.next())
 				continue
 			}
@@ -182,9 +193,7 @@ func (l *Lexer) Lex(input string) LexResult {
 			} else if err != nil {
 				errors = append(errors, *err)
 			}
-
 			l.next()
-
 			l.state = StateInitial
 			l.buf = ""
 			l.startPos = nil
