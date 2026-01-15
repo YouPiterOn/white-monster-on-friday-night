@@ -481,6 +481,8 @@ func punctuatorSubkind(ch byte) (PunctuatorSubkind, bool) {
 
 func operatorSubkind(lex string) (OperatorSubkind, bool) {
 	switch lex {
+	case ".":
+		return OperatorDot, true
 	case "+":
 		return OperatorPlus, true
 	case "-":

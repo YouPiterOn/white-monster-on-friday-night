@@ -115,7 +115,8 @@ func (k ConstantSubkind) String() string {
 type OperatorSubkind int
 
 const (
-	OperatorPlus OperatorSubkind = iota
+	OperatorDot OperatorSubkind = iota
+	OperatorPlus
 	OperatorMinus
 	OperatorStar
 	OperatorSlash
@@ -132,6 +133,7 @@ const (
 
 func (k OperatorSubkind) String() string {
 	return [...]string{
+		".",
 		"+",
 		"-",
 		"*",

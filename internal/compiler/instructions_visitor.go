@@ -466,6 +466,15 @@ func (v *InstructionsVisitor) VisitIndexExpr(n *ast.IndexExpr) any {
 	return &VisitExprResult{Reg: reg, TypeOf: arrayVisitExpr.TypeOf.ElementType}
 }
 
+func (v *InstructionsVisitor) VisitMemberExpr(n *ast.MemberExpr) any {
+	objectResult := n.Object.Visit(v)
+	objectVisitExpr, ok := CastVisitExprResult(objectResult)
+	if !ok {
+		return nil
+	}
+	return nil
+}
+
 func (v *InstructionsVisitor) VisitIf(n *ast.If) any {
 	conditionResult := n.Condition.Visit(v)
 	conditionVisitExpr, ok := CastVisitExprResult(conditionResult)

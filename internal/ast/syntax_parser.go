@@ -652,6 +652,10 @@ func (p *Parser) ParseAtomExpr(isStatement bool) Expression {
 			return p.ParseIndexExpr(isStatement)
 		}
 
+		if t != nil && t.Kind == lexer.Operator && t.Subkind == lexer.OperatorDot {
+			return p.ParseMemberExpr(isStatement)
+		}
+
 		return p.ParseIdentifier(isStatement)
 	}
 
@@ -820,6 +824,22 @@ func (p *Parser) ParseIndexExpr(isStatement bool) *IndexExpr {
 		return nil
 	}
 	return &IndexExpr{Array: array, Index: index, PosAt: array.PosAt, IsStatement: isStatement}
+}
+
+func (p *Parser) ParseMemberExpr(isStatement bool) *MemberExpr {
+	object := p.ParseIdentifier(false)
+	if object == nil {
+		return nil
+	}
+	dot := p.eatExpected(lexer.Operator, lexer.OperatorDot, "expected '.'")
+	if dot == nil {
+		return nil
+	}
+	property := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if property == nil {
+		return nil
+	}
+	return &MemberExpr{Object: object, Property: property.Lexeme, PosAt: object.PosAt, IsStatement: isStatement}
 }
 
 func atoi(s string) int {
