@@ -32,7 +32,7 @@ func TestParseDeclaration_VarWithTypeAndValue(t *testing.T) {
 		makeToken(":", lexer.Punctuator, lexer.Colon, 5, 1, 6),
 		makeToken("int", lexer.Type, lexer.TypeInt, 6, 1, 7),
 		makeToken("=", lexer.Punctuator, lexer.Assign, 10, 1, 11),
-		makeToken("42", lexer.Constant, lexer.Integer, 12, 1, 13),
+		makeToken("42", lexer.Constant, lexer.Int, 12, 1, 13),
 		makeToken(";", lexer.Punctuator, lexer.StatementEnd, 14, 1, 15),
 	}
 
@@ -180,7 +180,7 @@ func TestParseFunction_Basic(t *testing.T) {
 func TestParseReturn_WithValue(t *testing.T) {
 	tokens := []lexer.Token{
 		makeToken("return", lexer.Keyword, lexer.KeywordReturn, 0, 1, 1),
-		makeToken("42", lexer.Constant, lexer.Integer, 7, 1, 8),
+		makeToken("42", lexer.Constant, lexer.Int, 7, 1, 8),
 		makeToken(";", lexer.Punctuator, lexer.StatementEnd, 9, 1, 10),
 	}
 
@@ -208,7 +208,7 @@ func TestParseAssignment_Basic(t *testing.T) {
 	tokens := []lexer.Token{
 		makeToken("x", lexer.Identifier, lexer.IdentifierName, 0, 1, 1),
 		makeToken("=", lexer.Punctuator, lexer.Assign, 2, 1, 3),
-		makeToken("10", lexer.Constant, lexer.Integer, 4, 1, 5),
+		makeToken("10", lexer.Constant, lexer.Int, 4, 1, 5),
 		makeToken(";", lexer.Punctuator, lexer.StatementEnd, 6, 1, 7),
 	}
 
@@ -288,9 +288,9 @@ func TestParseCallExpr_NoArguments(t *testing.T) {
 
 func TestParseMultiplicativeExpr_IntLiteral(t *testing.T) {
 	tokens := []lexer.Token{
-		makeToken("123", lexer.Constant, lexer.Integer, 0, 1, 1),
+		makeToken("123", lexer.Constant, lexer.Int, 0, 1, 1),
 		makeToken("*", lexer.Operator, lexer.OperatorStar, 3, 1, 4),
-		makeToken("456", lexer.Constant, lexer.Integer, 5, 1, 6),
+		makeToken("456", lexer.Constant, lexer.Int, 5, 1, 6),
 	}
 
 	parser := NewParser(tokens)
@@ -344,7 +344,7 @@ func TestParseMultiplicativeExpr_IntLiteral(t *testing.T) {
 
 func TestParseIntLiteral_Basic(t *testing.T) {
 	tokens := []lexer.Token{
-		makeToken("456", lexer.Constant, lexer.Integer, 0, 1, 1),
+		makeToken("456", lexer.Constant, lexer.Int, 0, 1, 1),
 	}
 
 	parser := NewParser(tokens)
@@ -453,7 +453,7 @@ func TestParseBody_WithStatement(t *testing.T) {
 	tokens := []lexer.Token{
 		makeToken("{", lexer.Punctuator, lexer.BlockStart, 0, 1, 1),
 		makeToken("return", lexer.Keyword, lexer.KeywordReturn, 2, 1, 3),
-		makeToken("1", lexer.Constant, lexer.Integer, 9, 1, 10),
+		makeToken("1", lexer.Constant, lexer.Int, 9, 1, 10),
 		makeToken(";", lexer.Punctuator, lexer.StatementEnd, 10, 1, 11),
 		makeToken("}", lexer.Punctuator, lexer.BlockEnd, 12, 1, 13),
 	}
@@ -492,7 +492,7 @@ func TestParseProgram_Empty(t *testing.T) {
 
 func TestParseStatement_Expression(t *testing.T) {
 	tokens := []lexer.Token{
-		makeToken("42", lexer.Constant, lexer.Integer, 0, 1, 1),
+		makeToken("42", lexer.Constant, lexer.Int, 0, 1, 1),
 		makeToken(";", lexer.Punctuator, lexer.StatementEnd, 2, 1, 3),
 	}
 

@@ -367,7 +367,7 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 	for i, param := range n.Params {
 		params[i] = param.TypeOf
 	}
-	typeOf := ast.TypeClosure(&ast.FuncSignature{
+	typeOf := ast.TypeFunction(&ast.FuncSignature{
 		CallArgs:   params,
 		ReturnType: n.ReturnType,
 		Vararg:     n.Vararg,

@@ -381,7 +381,7 @@ func (l *Lexer) flushInteger() (*Token, *common.Error) {
 	return &Token{
 		Lexeme:  lex,
 		Kind:    Constant,
-		Subkind: Integer,
+		Subkind: Int,
 		Pos:     &pos,
 	}, nil
 }
@@ -516,12 +516,18 @@ func operatorSubkind(lex string) (OperatorSubkind, bool) {
 
 func typeSubkind(lex string) (TypeSubkind, bool) {
 	switch lex {
-	case "int":
+	case "Int":
 		return TypeInt, true
-	case "bool":
+	case "Float":
+		return TypeFloat, true
+	case "String":
+		return TypeString, true
+	case "Bool":
 		return TypeBool, true
 	case "null":
 		return TypeNull, true
+	case "void":
+		return TypeVoid, true
 	}
 	return 0, false
 }

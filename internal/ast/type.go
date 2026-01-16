@@ -16,23 +16,21 @@ const (
 	TYPE_BOOL
 	TYPE_NULL
 	TYPE_VOID
-	TYPE_CLOSURE
-	TYPE_NATIVE_FUNCTION
+	TYPE_FUNCTION
 	TYPE_ARRAY
 )
 
 func (t TypeEnum) String() string {
 	return [...]string{
 		"any",
-		"int",
-		"float",
-		"string",
-		"bool",
+		"Int",
+		"Float",
+		"String",
+		"Bool",
 		"null",
 		"void",
-		"closure",
-		"native_function",
-		"array",
+		"Function",
+		"Array",
 	}[t]
 }
 
@@ -77,12 +75,8 @@ func TypeVoid() *Type {
 	return &Type{Type: TYPE_VOID}
 }
 
-func TypeClosure(funcSignature *FuncSignature) *Type {
-	return &Type{Type: TYPE_CLOSURE, FuncSignature: funcSignature}
-}
-
-func TypeNativeFunction(funcSignature *FuncSignature) *Type {
-	return &Type{Type: TYPE_NATIVE_FUNCTION, FuncSignature: funcSignature}
+func TypeFunction(funcSignature *FuncSignature) *Type {
+	return &Type{Type: TYPE_FUNCTION, FuncSignature: funcSignature}
 }
 
 func TypeArrayOf(elementType *Type) *Type {

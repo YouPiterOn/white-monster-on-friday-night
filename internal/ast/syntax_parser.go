@@ -618,7 +618,7 @@ func (p *Parser) ParseAtomExpr(isStatement bool) Expression {
 		return nil
 	}
 
-	if t.Kind == lexer.Constant && t.Subkind == lexer.Integer {
+	if t.Kind == lexer.Constant && t.Subkind == lexer.Int {
 		return p.ParseIntLiteral(isStatement)
 	}
 
