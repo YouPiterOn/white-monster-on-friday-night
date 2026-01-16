@@ -33,14 +33,7 @@ func (c *FunctionContext) ImplementContextInterface() Context {
 
 func (c *FunctionContext) DefineVariable(name string, mutable bool, typeOf *ast.Type) int {
 	slot := c.currentVarSlot
-	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: nil}
-	c.currentVarSlot++
-	return slot
-}
-
-func (c *FunctionContext) DefineFunctionVariable(name string, mutable bool, typeOf *ast.Type, funcSignature *FuncSignature) int {
-	slot := c.currentVarSlot
-	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: funcSignature}
+	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf}
 	c.currentVarSlot++
 	return slot
 }
@@ -66,13 +59,12 @@ func (c *FunctionContext) FindUpvar(name string) (*Upvar, bool) {
 	parentLocal, ok := c.parent.FindLocalVariable(name)
 	if ok {
 		upvar := Upvar{
-			Name:          name,
-			Mutable:       parentLocal.Mutable,
-			LocalSlot:     c.currentUpvarSlot,
-			SlotInParent:  parentLocal.Slot,
-			IsFromParent:  true,
-			TypeOf:        parentLocal.TypeOf,
-			FuncSignature: parentLocal.FuncSignature,
+			Name:         name,
+			Mutable:      parentLocal.Mutable,
+			LocalSlot:    c.currentUpvarSlot,
+			SlotInParent: parentLocal.Slot,
+			IsFromParent: true,
+			TypeOf:       parentLocal.TypeOf,
 		}
 		c.upvarsMap[name] = upvar
 		c.currentUpvarSlot++

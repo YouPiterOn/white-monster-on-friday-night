@@ -36,57 +36,53 @@ func (t TypeEnum) String() string {
 	}[t]
 }
 
-type Type struct {
-	Type        TypeEnum
-	ElementType *Type
+type FuncSignature struct {
+	CallArgs   []*Type
+	ReturnType *Type
+	Vararg     bool
 }
-
-var primitiveTypes = map[TypeEnum]*Type{
-	TYPE_ANY:             {Type: TYPE_ANY},
-	TYPE_INT:             {Type: TYPE_INT},
-	TYPE_FLOAT:           {Type: TYPE_FLOAT},
-	TYPE_STRING:          {Type: TYPE_STRING},
-	TYPE_BOOL:            {Type: TYPE_BOOL},
-	TYPE_NULL:            {Type: TYPE_NULL},
-	TYPE_VOID:            {Type: TYPE_VOID},
-	TYPE_CLOSURE:         {Type: TYPE_CLOSURE},
-	TYPE_NATIVE_FUNCTION: {Type: TYPE_NATIVE_FUNCTION},
+type Type struct {
+	Type          TypeEnum
+	Proto         *Type
+	ElementType   *Type
+	Properties    map[string]*Type
+	FuncSignature *FuncSignature
 }
 
 func TypeAny() *Type {
-	return primitiveTypes[TYPE_ANY]
+	return &Type{Type: TYPE_ANY}
 }
 
 func TypeInt() *Type {
-	return primitiveTypes[TYPE_INT]
+	return &Type{Type: TYPE_INT}
 }
 
 func TypeFloat() *Type {
-	return primitiveTypes[TYPE_FLOAT]
+	return &Type{Type: TYPE_FLOAT}
 }
 
 func TypeString() *Type {
-	return primitiveTypes[TYPE_STRING]
+	return &Type{Type: TYPE_STRING}
 }
 
 func TypeBool() *Type {
-	return primitiveTypes[TYPE_BOOL]
+	return &Type{Type: TYPE_BOOL}
 }
 
 func TypeNull() *Type {
-	return primitiveTypes[TYPE_NULL]
+	return &Type{Type: TYPE_NULL}
 }
 
 func TypeVoid() *Type {
-	return primitiveTypes[TYPE_VOID]
+	return &Type{Type: TYPE_VOID}
 }
 
-func TypeClosure() *Type {
-	return primitiveTypes[TYPE_CLOSURE]
+func TypeClosure(funcSignature *FuncSignature) *Type {
+	return &Type{Type: TYPE_CLOSURE, FuncSignature: funcSignature}
 }
 
-func TypeNativeFunction() *Type {
-	return primitiveTypes[TYPE_NATIVE_FUNCTION]
+func TypeNativeFunction(funcSignature *FuncSignature) *Type {
+	return &Type{Type: TYPE_NATIVE_FUNCTION, FuncSignature: funcSignature}
 }
 
 func TypeArrayOf(elementType *Type) *Type {

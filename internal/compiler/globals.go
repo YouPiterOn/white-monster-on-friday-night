@@ -13,14 +13,7 @@ func NewGlobalTable() *GlobalTable {
 
 func (g *GlobalTable) DefineVariable(name string, mutable bool, typeOf *ast.Type) int {
 	slot := len(g.variables)
-	g.variables = append(g.variables, Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: nil})
-	g.ids[name] = slot
-	return slot
-}
-
-func (g *GlobalTable) DefineFunctionVariable(name string, mutable bool, typeOf *ast.Type, funcSignature *FuncSignature) int {
-	slot := len(g.variables)
-	g.variables = append(g.variables, Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: funcSignature})
+	g.variables = append(g.variables, Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf})
 	g.ids[name] = slot
 	return slot
 }

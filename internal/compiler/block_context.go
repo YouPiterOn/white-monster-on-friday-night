@@ -18,14 +18,7 @@ func (c *BlockContext) ImplementContextInterface() Context {
 
 func (c *BlockContext) DefineVariable(name string, mutable bool, typeOf *ast.Type) int {
 	slot := c.currentVarSlot
-	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: nil}
-	c.currentVarSlot++
-	return slot
-}
-
-func (c *BlockContext) DefineFunctionVariable(name string, mutable bool, typeOf *ast.Type, funcSignature *FuncSignature) int {
-	slot := c.currentVarSlot
-	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: funcSignature}
+	c.variables[name] = Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf}
 	c.currentVarSlot++
 	return slot
 }
