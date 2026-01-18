@@ -47,6 +47,10 @@ func (k KeywordSubkind) String() string {
 		"function",
 		"if",
 		"else",
+		"object",
+		"type",
+		"extends",
+		"implements",
 	}[k]
 }
 
