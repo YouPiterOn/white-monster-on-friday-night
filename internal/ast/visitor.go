@@ -20,4 +20,10 @@ type Visitor[R any] interface {
 	VisitCallExpr(n *CallExpr) R
 	VisitMemberExpr(n *MemberExpr) R
 	VisitIf(n *If) R
+
+	VisitObjectStatement(n *ObjectStatement) R
+
+	VisitTypeIdentifier(n *TypeIdentifier) R
+	VisitTypeDeclaration(n *TypeDeclaration) R
+	VisitTypeProperty(n *TypeProperty) R
 }

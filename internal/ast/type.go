@@ -7,16 +7,6 @@ import (
 	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 )
 
-type TypeIdentifier struct {
-	Name  string
-	PosAt *common.SourcePos
-}
-
-func (t *TypeIdentifier) Pos() *common.SourcePos { return t.PosAt }
-func (t *TypeIdentifier) Visit(v Visitor[any]) any {
-	return v.VisitTypeIdentifier(t)
-}
-
 type TypeDeclaration struct {
 	Name       string
 	Properties []TypeProperty
@@ -30,7 +20,7 @@ func (t *TypeDeclaration) Visit(v Visitor[any]) any {
 
 type TypeProperty struct {
 	Name   string
-	TypeOf *Type
+	TypeOf TypeExpression
 	PosAt  *common.SourcePos
 }
 

@@ -6,7 +6,7 @@ type ObjectStatement struct {
 	Properties   []*ObjectProperty
 	IsTypeObject bool
 	Extends      []*Identifier
-	Implements   []*TypeIdentifier
+	Implements   []TypeExpression
 	PosAt        *common.SourcePos
 }
 
@@ -18,6 +18,6 @@ func (o *ObjectStatement) Visit(v Visitor[any]) any {
 
 type ObjectProperty struct {
 	Name   string
-	TypeOf *Type
+	TypeOf TypeExpression
 	PosAt  *common.SourcePos
 }

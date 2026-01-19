@@ -12,7 +12,7 @@ type Statement interface {
 type Declaration struct {
 	IsMutable  bool
 	IsTyped    bool
-	TypeOf     *Type
+	TypeOf     TypeExpression
 	Identifier *Identifier
 	Value      Expression
 	PosAt      *common.SourcePos

@@ -6,7 +6,7 @@ import (
 
 type Param struct {
 	Name   string
-	TypeOf *Type
+	TypeOf TypeExpression
 	PosAt  *common.SourcePos
 	Vararg bool
 }
@@ -21,7 +21,7 @@ type Function struct {
 	Params     []Param
 	Vararg     bool
 	Body       []Statement
-	ReturnType *Type
+	ReturnType TypeExpression
 	PosAt      *common.SourcePos
 }
 
