@@ -1,2 +1,5 @@
-const a = 1;
-a.b;
+object a {
+  b: 1;
+}
+
+return a.b;

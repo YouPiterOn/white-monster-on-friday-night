@@ -107,7 +107,14 @@ func (p *Parser) ParseStatement() Statement {
 	}
 
 	if t.Kind == lexer.Keyword && t.Subkind == lexer.KeywordType {
+		if next != nil && next.Kind == lexer.Keyword && next.Subkind == lexer.KeywordObject {
+			return p.ParseObjectDeclaration()
+		}
 		return p.ParseTypeDeclaration()
+	}
+
+	if t.Kind == lexer.Keyword && t.Subkind == lexer.KeywordObject {
+		return p.ParseObjectDeclaration()
 	}
 
 	expression := p.ParseExpression(true)
@@ -437,6 +444,88 @@ func (p *Parser) ParseTypeProperty() *TypeProperty {
 		return nil
 	}
 	return &TypeProperty{Name: idTok.Lexeme, TypeOf: typeOf, PosAt: idTok.Pos}
+}
+
+func (p *Parser) ParseObjectDeclaration() *ObjectDeclaration {
+	typeKw := p.peek(0)
+	isTypeObject := false
+	if typeKw != nil && typeKw.Kind == lexer.Keyword && typeKw.Subkind == lexer.KeywordType {
+		isTypeObject = true
+		p.eat()
+	}
+	objectKw := p.eatExpected(lexer.Keyword, lexer.KeywordObject, "expected 'object'")
+	if objectKw == nil {
+		return nil
+	}
+	name := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if name == nil {
+		return nil
+	}
+	t := p.peek(0)
+	extends := []*Identifier{}
+	implements := []TypeExpression{}
+	if t != nil && t.Kind == lexer.Keyword && t.Subkind == lexer.KeywordExtends {
+		p.eat()
+		extendsId := p.ParseIdentifier(false)
+		if extendsId == nil {
+			return nil
+		}
+		extends = append(extends, extendsId)
+	} else if t != nil && t.Kind == lexer.Keyword && t.Subkind == lexer.KeywordImplements {
+		p.eat()
+		implementsExpr := p.ParseTypeExpression()
+		if implementsExpr == nil {
+			return nil
+		}
+		implements = append(implements, implementsExpr)
+	}
+	lbrace := p.eatExpected(lexer.Punctuator, lexer.BlockStart, "expected '{'")
+	if lbrace == nil {
+		return nil
+	}
+	properties := []*ObjectProperty{}
+	for {
+		t := p.peek(0)
+		if t == nil {
+			break
+		}
+		if t.Kind == lexer.Punctuator && t.Subkind == lexer.BlockEnd {
+			break
+		}
+		property := p.ParseObjectProperty()
+		if property == nil {
+			break
+		}
+		properties = append(properties, property)
+	}
+	rbrace := p.eatExpected(lexer.Punctuator, lexer.BlockEnd, "expected '}'")
+	if rbrace == nil {
+		return nil
+	}
+	return &ObjectDeclaration{
+		Name:         name.Lexeme,
+		Properties:   properties,
+		IsTypeObject: isTypeObject,
+		Extends:      extends,
+		Implements:   implements,
+		PosAt:        objectKw.Pos,
+	}
+}
+
+func (p *Parser) ParseObjectProperty() *ObjectProperty {
+	idTok := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if idTok == nil {
+		return nil
+	}
+	colon := p.eatExpected(lexer.Punctuator, lexer.Colon, "expected ':'")
+	if colon == nil {
+		return nil
+	}
+	value := p.ParseExpression(false)
+	if value == nil {
+		return nil
+	}
+	return &ObjectProperty{Name: idTok.Lexeme, Value: value, PosAt: idTok.Pos}
 }
 
 //

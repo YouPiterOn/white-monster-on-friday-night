@@ -3,6 +3,7 @@ package ast
 import "youpiteron.dev/white-monster-on-friday-night/internal/common"
 
 type ObjectDeclaration struct {
+	Name         string
 	Properties   []*ObjectProperty
 	IsTypeObject bool
 	Extends      []*Identifier
@@ -17,7 +18,7 @@ func (o *ObjectDeclaration) Visit(v Visitor[any]) any {
 }
 
 type ObjectProperty struct {
-	Name   string
-	TypeOf TypeExpression
-	PosAt  *common.SourcePos
+	Name  string
+	Value Expression
+	PosAt *common.SourcePos
 }
