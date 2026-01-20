@@ -21,7 +21,7 @@ type Visitor[R any] interface {
 	VisitMemberExpr(n *MemberExpr) R
 	VisitIf(n *If) R
 
-	VisitObjectStatement(n *ObjectStatement) R
+	VisitObjectDeclaration(n *ObjectDeclaration) R
 
 	VisitTypeIdentifier(n *TypeIdentifier) R
 	VisitTypeDeclaration(n *TypeDeclaration) R

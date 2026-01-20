@@ -14,6 +14,7 @@ type TypeDeclaration struct {
 }
 
 func (t *TypeDeclaration) Pos() *common.SourcePos { return t.PosAt }
+func (t *TypeDeclaration) statementNode()         {}
 func (t *TypeDeclaration) Visit(v Visitor[any]) any {
 	return v.VisitTypeDeclaration(t)
 }

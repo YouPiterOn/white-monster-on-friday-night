@@ -37,6 +37,10 @@ const (
 	KeywordFunction
 	KeywordIf
 	KeywordElse
+	KeywordObject
+	KeywordType
+	KeywordExtends
+	KeywordImplements
 )
 
 func (k KeywordSubkind) String() string {
