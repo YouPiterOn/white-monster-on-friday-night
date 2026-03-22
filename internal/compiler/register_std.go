@@ -21,4 +21,11 @@ func RegisterStdGlobals(gt *GlobalTable) {
 			Vararg:     false,
 		}),
 	)
+
+	gt.DefineType("Int", TypeInt())
+	gt.DefineType("Float", TypeFloat())
+	gt.DefineType("String", TypeString())
+	gt.DefineType("Bool", TypeBool())
+	gt.DefineType("null", TypeNull())
+	gt.DefineType("void", TypeVoid())
 }
