@@ -37,6 +37,10 @@ const (
 	KeywordFunction
 	KeywordIf
 	KeywordElse
+	KeywordObject
+	KeywordType
+	KeywordExtends
+	KeywordImplements
 )
 
 func (k KeywordSubkind) String() string {
@@ -47,6 +51,10 @@ func (k KeywordSubkind) String() string {
 		"function",
 		"if",
 		"else",
+		"object",
+		"type",
+		"extends",
+		"implements",
 	}[k]
 }
 
@@ -95,7 +103,7 @@ func (k PunctuatorSubkind) String() string {
 type ConstantSubkind int
 
 const (
-	Integer ConstantSubkind = iota
+	Int ConstantSubkind = iota
 	Float
 	String
 	Boolean
@@ -104,7 +112,7 @@ const (
 
 func (k ConstantSubkind) String() string {
 	return [...]string{
-		"integer",
+		"int",
 		"float",
 		"string",
 		"boolean",
@@ -115,7 +123,8 @@ func (k ConstantSubkind) String() string {
 type OperatorSubkind int
 
 const (
-	OperatorPlus OperatorSubkind = iota
+	OperatorDot OperatorSubkind = iota
+	OperatorPlus
 	OperatorMinus
 	OperatorStar
 	OperatorSlash
@@ -132,6 +141,7 @@ const (
 
 func (k OperatorSubkind) String() string {
 	return [...]string{
+		".",
 		"+",
 		"-",
 		"*",
@@ -161,10 +171,10 @@ const (
 
 func (k TypeSubkind) String() string {
 	return [...]string{
-		"int",
-		"float",
-		"string",
-		"bool",
+		"Int",
+		"Float",
+		"String",
+		"Bool",
 		"null",
 		"void",
 	}[k]

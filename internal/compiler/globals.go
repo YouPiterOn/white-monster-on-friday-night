@@ -5,6 +5,7 @@ import "youpiteron.dev/white-monster-on-friday-night/internal/ast"
 type GlobalTable struct {
 	ids       map[string]int
 	variables []Variable
+	types     map[string]*Type
 }
 
 func NewGlobalTable() *GlobalTable {
@@ -13,14 +14,7 @@ func NewGlobalTable() *GlobalTable {
 
 func (g *GlobalTable) DefineVariable(name string, mutable bool, typeOf *ast.Type) int {
 	slot := len(g.variables)
-	g.variables = append(g.variables, Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: nil})
-	g.ids[name] = slot
-	return slot
-}
-
-func (g *GlobalTable) DefineFunctionVariable(name string, mutable bool, typeOf *ast.Type, funcSignature *FuncSignature) int {
-	slot := len(g.variables)
-	g.variables = append(g.variables, Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf, FuncSignature: funcSignature})
+	g.variables = append(g.variables, Variable{Name: name, Slot: slot, Mutable: mutable, TypeOf: typeOf})
 	g.ids[name] = slot
 	return slot
 }
@@ -33,6 +27,18 @@ func (g *GlobalTable) FindVariable(name string) (*Variable, bool) {
 	return nil, false
 }
 
-func (g *GlobalTable) Length() int {
+func (g *GlobalTable) VariablesLength() int {
 	return len(g.variables)
+}
+
+func (g *GlobalTable) DefineType(name string, typeOf *Type) {
+	g.types[name] = typeOf
+}
+
+func (g *GlobalTable) FindType(name string) (*Type, bool) {
+	typeOf, ok := g.types[name]
+	if ok {
+		return typeOf, true
+	}
+	return nil, false
 }

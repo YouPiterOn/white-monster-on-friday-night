@@ -1,127 +1,126 @@
 package compiler
 
 import (
-	"youpiteron.dev/white-monster-on-friday-night/internal/ast"
 	"youpiteron.dev/white-monster-on-friday-night/internal/lexer"
 )
 
 type BinaryOpInfo struct {
-	ResultType *ast.Type
+	ResultType *Type
 	OpCode     OpCode
 }
 
-var BinaryOpTable = map[lexer.OperatorSubkind]map[ast.TypeEnum]map[ast.TypeEnum]BinaryOpInfo{
+var BinaryOpTable = map[lexer.OperatorSubkind]map[PrimitiveType]map[PrimitiveType]BinaryOpInfo{
 	lexer.OperatorPlus: {
-		ast.TYPE_INT: {
-			ast.TYPE_INT: {ResultType: ast.TypeInt(), OpCode: ADD_INT},
+		TYPE_INT: {
+			TYPE_INT: {ResultType: TypeInt(), OpCode: ADD_INT},
 		},
-		ast.TYPE_FLOAT: {
-			ast.TYPE_FLOAT: {ResultType: ast.TypeFloat(), OpCode: ADD_FLOAT},
+		TYPE_FLOAT: {
+			TYPE_FLOAT: {ResultType: TypeFloat(), OpCode: ADD_FLOAT},
 		},
-		ast.TYPE_STRING: {
-			ast.TYPE_STRING: {ResultType: ast.TypeString(), OpCode: ADD_STRING},
+		TYPE_STRING: {
+			TYPE_STRING: {ResultType: TypeString(), OpCode: ADD_STRING},
 		},
 	},
 	lexer.OperatorMinus: {
-		ast.TYPE_INT: {
-			ast.TYPE_INT: {ResultType: ast.TypeInt(), OpCode: SUB_INT},
+		TYPE_INT: {
+			TYPE_INT: {ResultType: TypeInt(), OpCode: SUB_INT},
 		},
-		ast.TYPE_FLOAT: {
-			ast.TYPE_FLOAT: {ResultType: ast.TypeFloat(), OpCode: SUB_FLOAT},
+		TYPE_FLOAT: {
+			TYPE_FLOAT: {ResultType: TypeFloat(), OpCode: SUB_FLOAT},
 		},
 	},
 	lexer.OperatorStar: {
-		ast.TYPE_INT: {
-			ast.TYPE_INT: {ResultType: ast.TypeInt(), OpCode: MUL_INT},
+		TYPE_INT: {
+			TYPE_INT: {ResultType: TypeInt(), OpCode: MUL_INT},
 		},
-		ast.TYPE_FLOAT: {
-			ast.TYPE_FLOAT: {ResultType: ast.TypeFloat(), OpCode: MUL_FLOAT},
+		TYPE_FLOAT: {
+			TYPE_FLOAT: {ResultType: TypeFloat(), OpCode: MUL_FLOAT},
 		},
 	},
 	lexer.OperatorSlash: {
-		ast.TYPE_INT: {
-			ast.TYPE_INT: {ResultType: ast.TypeInt(), OpCode: DIV_INT},
+		TYPE_INT: {
+			TYPE_INT: {ResultType: TypeInt(), OpCode: DIV_INT},
 		},
-		ast.TYPE_FLOAT: {
-			ast.TYPE_FLOAT: {ResultType: ast.TypeFloat(), OpCode: DIV_FLOAT},
+		TYPE_FLOAT: {
+			TYPE_FLOAT: {ResultType: TypeFloat(), OpCode: DIV_FLOAT},
 		},
 	},
 	lexer.OperatorEqual: {
-		ast.TYPE_INT: {
-			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: EQ_INT},
+		TYPE_INT: {
+			TYPE_INT: {ResultType: TypeBool(), OpCode: EQ_INT},
 		},
-		ast.TYPE_BOOL: {
-			ast.TYPE_BOOL: {ResultType: ast.TypeBool(), OpCode: EQ_BOOL},
+		TYPE_BOOL: {
+			TYPE_BOOL: {ResultType: TypeBool(), OpCode: EQ_BOOL},
 		},
-		ast.TYPE_FLOAT: {
-			ast.TYPE_FLOAT: {ResultType: ast.TypeBool(), OpCode: EQ_FLOAT},
+		TYPE_FLOAT: {
+			TYPE_FLOAT: {ResultType: TypeBool(), OpCode: EQ_FLOAT},
 		},
-		ast.TYPE_STRING: {
-			ast.TYPE_STRING: {ResultType: ast.TypeBool(), OpCode: EQ_STRING},
+		TYPE_STRING: {
+			TYPE_STRING: {ResultType: TypeBool(), OpCode: EQ_STRING},
 		},
 	},
 	lexer.OperatorNotEqual: {
-		ast.TYPE_INT: {
-			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: NE_INT},
+		TYPE_INT: {
+			TYPE_INT: {ResultType: TypeBool(), OpCode: NE_INT},
 		},
-		ast.TYPE_BOOL: {
-			ast.TYPE_BOOL: {ResultType: ast.TypeBool(), OpCode: NE_BOOL},
+		TYPE_BOOL: {
+			TYPE_BOOL: {ResultType: TypeBool(), OpCode: NE_BOOL},
 		},
-		ast.TYPE_FLOAT: {
-			ast.TYPE_FLOAT: {ResultType: ast.TypeBool(), OpCode: NE_FLOAT},
+		TYPE_FLOAT: {
+			TYPE_FLOAT: {ResultType: TypeBool(), OpCode: NE_FLOAT},
 		},
-		ast.TYPE_STRING: {
-			ast.TYPE_STRING: {ResultType: ast.TypeBool(), OpCode: NE_STRING},
+		TYPE_STRING: {
+			TYPE_STRING: {ResultType: TypeBool(), OpCode: NE_STRING},
 		},
 	},
 	lexer.OperatorGreater: {
-		ast.TYPE_INT: {
-			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: GT_INT},
+		TYPE_INT: {
+			TYPE_INT: {ResultType: TypeBool(), OpCode: GT_INT},
 		},
-		ast.TYPE_FLOAT: {
-			ast.TYPE_FLOAT: {ResultType: ast.TypeBool(), OpCode: GT_FLOAT},
+		TYPE_FLOAT: {
+			TYPE_FLOAT: {ResultType: TypeBool(), OpCode: GT_FLOAT},
 		},
 	},
 	lexer.OperatorGreaterEqual: {
-		ast.TYPE_INT: {
-			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: GTE_INT},
+		TYPE_INT: {
+			TYPE_INT: {ResultType: TypeBool(), OpCode: GTE_INT},
 		},
-		ast.TYPE_FLOAT: {
-			ast.TYPE_FLOAT: {ResultType: ast.TypeBool(), OpCode: GTE_FLOAT},
+		TYPE_FLOAT: {
+			TYPE_FLOAT: {ResultType: TypeBool(), OpCode: GTE_FLOAT},
 		},
 	},
 	lexer.OperatorLess: {
-		ast.TYPE_INT: {
-			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: LT_INT},
+		TYPE_INT: {
+			TYPE_INT: {ResultType: TypeBool(), OpCode: LT_INT},
 		},
-		ast.TYPE_FLOAT: {
-			ast.TYPE_FLOAT: {ResultType: ast.TypeBool(), OpCode: LT_FLOAT},
+		TYPE_FLOAT: {
+			TYPE_FLOAT: {ResultType: TypeBool(), OpCode: LT_FLOAT},
 		},
 	},
 	lexer.OperatorLessEqual: {
-		ast.TYPE_INT: {
-			ast.TYPE_INT: {ResultType: ast.TypeBool(), OpCode: LTE_INT},
+		TYPE_INT: {
+			TYPE_INT: {ResultType: TypeBool(), OpCode: LTE_INT},
 		},
-		ast.TYPE_FLOAT: {
-			ast.TYPE_FLOAT: {ResultType: ast.TypeBool(), OpCode: LTE_FLOAT},
+		TYPE_FLOAT: {
+			TYPE_FLOAT: {ResultType: TypeBool(), OpCode: LTE_FLOAT},
 		},
 	},
 	lexer.OperatorAnd: {
-		ast.TYPE_BOOL: {
-			ast.TYPE_BOOL: {ResultType: ast.TypeBool(), OpCode: AND_BOOL},
+		TYPE_BOOL: {
+			TYPE_BOOL: {ResultType: TypeBool(), OpCode: AND_BOOL},
 		},
 	},
 	lexer.OperatorOr: {
-		ast.TYPE_BOOL: {
-			ast.TYPE_BOOL: {ResultType: ast.TypeBool(), OpCode: OR_BOOL},
+		TYPE_BOOL: {
+			TYPE_BOOL: {ResultType: TypeBool(), OpCode: OR_BOOL},
 		},
 	},
 }
 
 func ResolveBinaryOp(
 	op lexer.OperatorSubkind,
-	left *ast.Type,
-	right *ast.Type,
+	left *Type,
+	right *Type,
 ) (BinaryOpInfo, bool) {
 	opMap, ok := BinaryOpTable[op]
 	if !ok {

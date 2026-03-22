@@ -106,6 +106,17 @@ func (p *Parser) ParseStatement() Statement {
 		return p.ParseIf()
 	}
 
+	if t.Kind == lexer.Keyword && t.Subkind == lexer.KeywordType {
+		if next != nil && next.Kind == lexer.Keyword && next.Subkind == lexer.KeywordObject {
+			return p.ParseObjectDeclaration()
+		}
+		return p.ParseTypeDeclaration()
+	}
+
+	if t.Kind == lexer.Keyword && t.Subkind == lexer.KeywordObject {
+		return p.ParseObjectDeclaration()
+	}
+
 	expression := p.ParseExpression(true)
 	if expression == nil {
 		p.addError(fmt.Sprintf("expected statement but got %v(%v)", t.Kind, t.Subkind), t.Pos)
@@ -117,30 +128,6 @@ func (p *Parser) ParseStatement() Statement {
 	}
 
 	return expression
-}
-
-func (p *Parser) ParseType() *Type {
-	tok := p.peek(0)
-	if tok == nil {
-		return nil
-	}
-	if tok.Kind == lexer.Punctuator && tok.Subkind == lexer.BracketOpen {
-		p.eat()
-		arrClose := p.eatExpected(lexer.Punctuator, lexer.BracketClose, "expected ']'")
-		if arrClose == nil {
-			return nil
-		}
-		elementType := p.eatExpected(lexer.Type, nil, "expected type")
-		if elementType == nil {
-			return nil
-		}
-		return TypeArrayOf(TypeFromTypeSubkind(elementType.Subkind.(lexer.TypeSubkind)))
-	} else if tok.Kind == lexer.Type {
-		p.eat()
-		return TypeFromTypeSubkind(tok.Subkind.(lexer.TypeSubkind))
-	}
-	p.addError(fmt.Sprintf("expected type but got %v(%v)", tok.Kind, tok.Subkind), tok.Pos)
-	return nil
 }
 
 func (p *Parser) ParseFunction() Statement {
@@ -193,7 +180,7 @@ func (p *Parser) ParseFunction() Statement {
 	if colon == nil {
 		return nil
 	}
-	returnType := p.ParseType()
+	returnType := p.ParseTypeExpression()
 	if returnType == nil {
 		return nil
 	}
@@ -211,7 +198,7 @@ func (p *Parser) ParseParam() *Param {
 	if colon == nil {
 		return nil
 	}
-	typeOf := p.ParseType()
+	typeOf := p.ParseTypeExpression()
 	if typeOf == nil {
 		return nil
 	}
@@ -310,12 +297,12 @@ func (p *Parser) ParseDeclaration() *Declaration {
 	}
 
 	isTyped := false
-	var typeOf *Type
+	var typeOf TypeExpression
 	colonTok := p.peek(0)
 	if colonTok != nil && colonTok.Kind == lexer.Punctuator && colonTok.Subkind == lexer.Colon {
 		isTyped = true
 		p.eat()
-		typeOf = p.ParseType()
+		typeOf = p.ParseTypeExpression()
 		if typeOf == nil {
 			return nil
 		}
@@ -403,6 +390,155 @@ func (p *Parser) ParseIf() *If {
 	}
 	return &If{Condition: condition, Body: body, ElseBody: elseBody, PosAt: kw.Pos}
 }
+
+func (p *Parser) ParseTypeDeclaration() *TypeDeclaration {
+	kw := p.eatExpected(lexer.Keyword, lexer.KeywordType, "expected 'type'")
+	if kw == nil {
+		return nil
+	}
+	idTok := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if idTok == nil {
+		return nil
+	}
+	lbrace := p.eatExpected(lexer.Punctuator, lexer.BlockStart, "expected '{'")
+	if lbrace == nil {
+		return nil
+	}
+	properties := []TypeProperty{}
+	for {
+		t := p.peek(0)
+		if t == nil {
+			break
+		}
+		if t.Kind == lexer.Punctuator && t.Subkind == lexer.BlockEnd {
+			break
+		}
+		property := p.ParseTypeProperty()
+		if property == nil {
+			break
+		}
+		properties = append(properties, *property)
+	}
+	rbrace := p.eatExpected(lexer.Punctuator, lexer.BlockEnd, "expected '}'")
+	if rbrace == nil {
+		return nil
+	}
+	return &TypeDeclaration{Name: idTok.Lexeme, Properties: properties, PosAt: kw.Pos}
+}
+
+func (p *Parser) ParseTypeProperty() *TypeProperty {
+	idTok := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if idTok == nil {
+		return nil
+	}
+	colon := p.eatExpected(lexer.Punctuator, lexer.Colon, "expected ':'")
+	if colon == nil {
+		return nil
+	}
+	typeOf := p.ParseTypeExpression()
+	if typeOf == nil {
+		return nil
+	}
+	semicolon := p.eatExpected(lexer.Punctuator, lexer.StatementEnd, "expected ';'")
+	if semicolon == nil {
+		return nil
+	}
+	return &TypeProperty{Name: idTok.Lexeme, TypeOf: typeOf, PosAt: idTok.Pos}
+}
+
+func (p *Parser) ParseObjectDeclaration() *ObjectDeclaration {
+	typeKw := p.peek(0)
+	isTypeObject := false
+	if typeKw != nil && typeKw.Kind == lexer.Keyword && typeKw.Subkind == lexer.KeywordType {
+		isTypeObject = true
+		p.eat()
+	}
+	objectKw := p.eatExpected(lexer.Keyword, lexer.KeywordObject, "expected 'object'")
+	if objectKw == nil {
+		return nil
+	}
+	name := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if name == nil {
+		return nil
+	}
+	t := p.peek(0)
+	extends := []*Identifier{}
+	implements := []TypeExpression{}
+	if t != nil && t.Kind == lexer.Keyword && t.Subkind == lexer.KeywordExtends {
+		p.eat()
+		extendsId := p.ParseIdentifier(false)
+		if extendsId == nil {
+			return nil
+		}
+		extends = append(extends, extendsId)
+	} else if t != nil && t.Kind == lexer.Keyword && t.Subkind == lexer.KeywordImplements {
+		p.eat()
+		implementsExpr := p.ParseTypeExpression()
+		if implementsExpr == nil {
+			return nil
+		}
+		implements = append(implements, implementsExpr)
+	}
+	lbrace := p.eatExpected(lexer.Punctuator, lexer.BlockStart, "expected '{'")
+	if lbrace == nil {
+		return nil
+	}
+	properties := []*ObjectProperty{}
+	for {
+		t := p.peek(0)
+		if t == nil {
+			break
+		}
+		if t.Kind == lexer.Punctuator && t.Subkind == lexer.BlockEnd {
+			break
+		}
+		property := p.ParseObjectProperty()
+		if property == nil {
+			break
+		}
+		properties = append(properties, property)
+	}
+	rbrace := p.eatExpected(lexer.Punctuator, lexer.BlockEnd, "expected '}'")
+	if rbrace == nil {
+		return nil
+	}
+	return &ObjectDeclaration{
+		Name:         name.Lexeme,
+		Properties:   properties,
+		IsTypeObject: isTypeObject,
+		Extends:      extends,
+		Implements:   implements,
+		PosAt:        objectKw.Pos,
+	}
+}
+
+func (p *Parser) ParseObjectProperty() *ObjectProperty {
+	idTok := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if idTok == nil {
+		return nil
+	}
+	colon := p.eatExpected(lexer.Punctuator, lexer.Colon, "expected ':'")
+	if colon == nil {
+		return nil
+	}
+	value := p.ParseExpression(false)
+	if value == nil {
+		return nil
+	}
+	return &ObjectProperty{Name: idTok.Lexeme, Value: value, PosAt: idTok.Pos}
+}
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+// ---------- Expressions ----------
 
 func (p *Parser) ParseExpression(isStatement bool) Expression {
 	return p.ParseLogicalOrExpr(isStatement)
@@ -618,7 +754,7 @@ func (p *Parser) ParseAtomExpr(isStatement bool) Expression {
 		return nil
 	}
 
-	if t.Kind == lexer.Constant && t.Subkind == lexer.Integer {
+	if t.Kind == lexer.Constant && t.Subkind == lexer.Int {
 		return p.ParseIntLiteral(isStatement)
 	}
 
@@ -650,6 +786,10 @@ func (p *Parser) ParseAtomExpr(isStatement bool) Expression {
 
 		if t != nil && t.Kind == lexer.Punctuator && t.Subkind == lexer.BracketOpen {
 			return p.ParseIndexExpr(isStatement)
+		}
+
+		if t != nil && t.Kind == lexer.Operator && t.Subkind == lexer.OperatorDot {
+			return p.ParseMemberExpr(isStatement)
 		}
 
 		return p.ParseIdentifier(isStatement)
@@ -822,10 +962,63 @@ func (p *Parser) ParseIndexExpr(isStatement bool) *IndexExpr {
 	return &IndexExpr{Array: array, Index: index, PosAt: array.PosAt, IsStatement: isStatement}
 }
 
+func (p *Parser) ParseMemberExpr(isStatement bool) *MemberExpr {
+	object := p.ParseIdentifier(false)
+	if object == nil {
+		return nil
+	}
+	dot := p.eatExpected(lexer.Operator, lexer.OperatorDot, "expected '.'")
+	if dot == nil {
+		return nil
+	}
+	property := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if property == nil {
+		return nil
+	}
+	return &MemberExpr{Object: object, Property: property.Lexeme, PosAt: object.PosAt, IsStatement: isStatement}
+}
+
 func atoi(s string) int {
 	var n int
 	for i := 0; i < len(s); i++ {
 		n = n*10 + int(s[i]-'0')
 	}
 	return n
+}
+
+//
+//
+//
+//
+//
+//
+//
+//
+// ---------- Type Expressions ----------
+
+func (p *Parser) ParseTypeExpression() TypeExpression {
+	tok := p.peek(0)
+	if tok.Kind == lexer.Identifier && tok.Subkind == lexer.IdentifierName {
+		return p.ParseTypeIdentifier()
+	}
+	p.addError(fmt.Sprintf("expected type but got %v(%v)", tok.Kind, tok.Subkind), tok.Pos)
+	return nil
+}
+
+func (p *Parser) ParseTypeIdentifier() *TypeIdentifier {
+	idTok := p.eatExpected(lexer.Identifier, lexer.IdentifierName, "expected identifier")
+	if idTok == nil {
+		return nil
+	}
+	bracketOpen := p.peek(0)
+	isArray := false
+	if bracketOpen != nil && bracketOpen.Kind == lexer.Punctuator && bracketOpen.Subkind == lexer.BracketOpen {
+		p.eat()
+		arrClose := p.eatExpected(lexer.Punctuator, lexer.BracketClose, "expected ']'")
+		if arrClose == nil {
+			return nil
+		}
+		isArray = true
+	}
+	return &TypeIdentifier{Name: idTok.Lexeme, IsArray: isArray, PosAt: idTok.Pos}
 }

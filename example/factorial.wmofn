@@ -1,4 +1,4 @@
-function factorial(n: int): int {
+function factorial(n: Int): Int {
   if(n == 1) {
     return n;
   }

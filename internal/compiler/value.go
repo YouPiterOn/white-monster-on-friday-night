@@ -18,6 +18,7 @@ const (
 	VAL_NULL
 	VAL_NATIVE_FUNCTION
 	VAL_ARRAY
+	VAL_OBJECT
 )
 
 func (t ValueType) String() string {
@@ -30,18 +31,21 @@ func (t ValueType) String() string {
 		"NULL",
 		"NATIVE_FUNCTION",
 		"ARRAY",
+		"OBJECT",
 	}[t]
 }
 
 type Value struct {
-	TypeOf  ValueType
-	Int     int
-	Float   float64
-	String  string
-	Bool    bool
-	Closure Closure
-	Native  NativeFunction
-	Array   []Value
+	TypeOf    ValueType
+	Prototype *Value
+	Int       int
+	Float     float64
+	String    string
+	Bool      bool
+	Closure   Closure
+	Native    NativeFunction
+	Array     []Value
+	Object    map[string]Value
 }
 
 func NewIntValue(value int) Value {

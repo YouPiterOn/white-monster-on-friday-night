@@ -9,9 +9,8 @@ import (
 )
 
 type VisitExprResult struct {
-	Reg           int
-	TypeOf        *ast.Type
-	FuncSignature *FuncSignature
+	Reg    int
+	TypeOf *ast.Type
 }
 
 func CastVisitExprResult(result any) (*VisitExprResult, bool) {
@@ -314,22 +313,17 @@ func (v *InstructionsVisitor) VisitIdentifier(n *ast.Identifier) any {
 	}
 	reg := v.nextReg()
 	var typeOf *ast.Type
-	var funcSignature *FuncSignature
 	if localVar != nil {
 		v.context.AddInstruction(InstrLoadVar(reg, localVar.Slot))
 		typeOf = localVar.TypeOf
-		funcSignature = localVar.FuncSignature
 	} else if upvar != nil {
 		v.context.AddInstruction(InstrLoadUpvar(reg, upvar.LocalSlot))
 		typeOf = upvar.TypeOf
-		funcSignature = upvar.FuncSignature
 	} else if globalVar != nil {
 		v.context.AddInstruction(InstrLoadGlobal(reg, globalVar.Slot))
 		typeOf = globalVar.TypeOf
-		funcSignature = globalVar.FuncSignature
 	}
-	fmt.Printf("funcSignature: %v\n", funcSignature)
-	return &VisitExprResult{Reg: reg, TypeOf: typeOf, FuncSignature: funcSignature}
+	return &VisitExprResult{Reg: reg, TypeOf: typeOf}
 }
 
 func (v *InstructionsVisitor) VisitBinaryExpr(n *ast.BinaryExpr) any {
@@ -369,15 +363,22 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 		return nil
 	}
 
+	params := make([]*ast.Type, len(n.Params))
+	for i, param := range n.Params {
+		params[i] = param.TypeOf
+	}
+	typeOf := ast.TypeFunction(&ast.FuncSignature{
+		CallArgs:   params,
+		ReturnType: n.ReturnType,
+		Vararg:     n.Vararg,
+	})
+	slot := v.context.DefineVariable(n.Name, false, typeOf)
+
 	v.enterFunctionContext(n.ReturnType)
 
 	for _, param := range n.Params {
 		param.Visit(v)
 	}
-
-	params := v.context.Params()
-	returnType := v.context.ReturnType()
-	slot := v.context.Parent().DefineFunctionVariable(n.Name, false, ast.TypeClosure(), &FuncSignature{CallArgs: params, ReturnType: returnType, Vararg: n.Vararg})
 
 	for _, statement := range n.Body {
 		statement.Visit(v)
@@ -388,7 +389,7 @@ func (v *InstructionsVisitor) VisitFunction(n *ast.Function) any {
 	reg := v.nextReg()
 	v.context.AddInstruction(InstrClosure(reg, functionSlot))
 	v.context.AddInstruction(InstrStoreVar(reg, slot))
-	return &VisitExprResult{Reg: reg, TypeOf: ast.TypeClosure()}
+	return &VisitExprResult{Reg: reg, TypeOf: typeOf}
 }
 
 func (v *InstructionsVisitor) VisitBlock(n *ast.Block) any {
@@ -406,30 +407,28 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 	if !ok {
 		return nil
 	}
-	if !typecheck(resultVisitExpr.TypeOf, ast.TypeClosure(), ast.TypeNativeFunction()) {
-		v.addError(fmt.Sprintf("variable %s must be callable, but got type %s", n.Identifier.Name, resultVisitExpr.TypeOf), n.Identifier.Pos())
-		return nil
-	}
-	if resultVisitExpr.FuncSignature == nil {
-		v.addError(fmt.Sprintf("function %s is not callable", n.Identifier.Name), n.Identifier.Pos())
+
+	typeOf := resultVisitExpr.TypeOf
+	if typeOf.FuncSignature == nil {
+		v.addError(fmt.Sprintf("variable %s is not callable", n.Identifier.Name), n.Identifier.Pos())
 		return nil
 	}
 
-	if len(n.Arguments) < len(resultVisitExpr.FuncSignature.CallArgs) {
-		v.addError(fmt.Sprintf("function %s takes %d arguments, but got %d", n.Identifier.Name, len(resultVisitExpr.FuncSignature.CallArgs), len(n.Arguments)), n.Identifier.Pos())
+	if len(n.Arguments) < len(typeOf.FuncSignature.CallArgs) {
+		v.addError(fmt.Sprintf("function %s takes %d arguments, but got %d", n.Identifier.Name, len(typeOf.FuncSignature.CallArgs), len(n.Arguments)), n.Identifier.Pos())
 		return nil
-	} else if len(n.Arguments) > len(resultVisitExpr.FuncSignature.CallArgs) && !resultVisitExpr.FuncSignature.Vararg {
-		v.addError(fmt.Sprintf("function %s takes %d arguments, but got %d", n.Identifier.Name, len(resultVisitExpr.FuncSignature.CallArgs), len(n.Arguments)), n.Identifier.Pos())
+	} else if len(n.Arguments) > len(typeOf.FuncSignature.CallArgs) && !typeOf.FuncSignature.Vararg {
+		v.addError(fmt.Sprintf("function %s takes %d arguments, but got %d", n.Identifier.Name, len(typeOf.FuncSignature.CallArgs), len(n.Arguments)), n.Identifier.Pos())
 		return nil
 	}
 
 	args := []int{}
 	isOk := true
 
-	if resultVisitExpr.FuncSignature.Vararg {
-		args, isOk = v.handleArgsWithVararg(n.Arguments, resultVisitExpr.FuncSignature.CallArgs)
+	if typeOf.FuncSignature.Vararg {
+		args, isOk = v.handleArgsWithVararg(n.Arguments, typeOf.FuncSignature.CallArgs)
 	} else {
-		args, isOk = v.handleArgsWithoutVararg(n.Arguments, resultVisitExpr.FuncSignature.CallArgs)
+		args, isOk = v.handleArgsWithoutVararg(n.Arguments, typeOf.FuncSignature.CallArgs)
 	}
 
 	if !isOk {
@@ -438,7 +437,7 @@ func (v *InstructionsVisitor) VisitCallExpr(n *ast.CallExpr) any {
 
 	resultReg := v.nextReg()
 	v.context.AddInstruction(InstrCall(resultReg, resultVisitExpr.Reg, args))
-	return &VisitExprResult{Reg: resultReg, TypeOf: resultVisitExpr.FuncSignature.ReturnType}
+	return &VisitExprResult{Reg: resultReg, TypeOf: typeOf.FuncSignature.ReturnType}
 }
 
 func (v *InstructionsVisitor) VisitIndexExpr(n *ast.IndexExpr) any {
@@ -464,6 +463,15 @@ func (v *InstructionsVisitor) VisitIndexExpr(n *ast.IndexExpr) any {
 	reg := v.nextReg()
 	v.context.AddInstruction(InstrIndexArray(reg, arrayVisitExpr.Reg, indexVisitExpr.Reg))
 	return &VisitExprResult{Reg: reg, TypeOf: arrayVisitExpr.TypeOf.ElementType}
+}
+
+func (v *InstructionsVisitor) VisitMemberExpr(n *ast.MemberExpr) any {
+	objectResult := n.Object.Visit(v)
+	_, ok := CastVisitExprResult(objectResult)
+	if !ok {
+		return nil
+	}
+	return nil
 }
 
 func (v *InstructionsVisitor) VisitIf(n *ast.If) any {

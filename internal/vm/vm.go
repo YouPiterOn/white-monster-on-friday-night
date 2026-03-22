@@ -16,7 +16,7 @@ type VM struct {
 func (v *VM) ImplementVMInterface() {}
 
 func NewVM(gt *compiler.GlobalTable) *VM {
-	vm := &VM{frames: make([]Frame, 0), moduleInstance: nil, globals: make([]compiler.Value, gt.Length())}
+	vm := &VM{frames: make([]Frame, 0), moduleInstance: nil, globals: make([]compiler.Value, gt.VariablesLength())}
 	vm.initStdlibValues(gt)
 	return vm
 }

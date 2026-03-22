@@ -141,3 +141,17 @@ func (i *IndexExpr) expressionNode()        {}
 func (i *IndexExpr) Visit(v Visitor[any]) any {
 	return v.VisitIndexExpr(i)
 }
+
+type MemberExpr struct {
+	Object      Expression
+	Property    string
+	PosAt       *common.SourcePos
+	IsStatement bool
+}
+
+func (m *MemberExpr) Pos() *common.SourcePos { return m.PosAt }
+func (m *MemberExpr) statementNode()         {}
+func (m *MemberExpr) expressionNode()        {}
+func (m *MemberExpr) Visit(v Visitor[any]) any {
+	return v.VisitMemberExpr(m)
+}
